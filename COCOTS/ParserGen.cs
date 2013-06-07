@@ -343,7 +343,7 @@ public class ParserGen {
 		symSet.Add(tab.allSyncSets);
 
 		fram = g.OpenFrame("Parser.frame");
-		gen = g.OpenGen("Parser.cs");
+		gen = g.OpenGen("Parser.ts");
 		err = new StringWriter();
 		foreach (Symbol sym in tab.terminals) GenErrorMsg(tErr, sym);
 		

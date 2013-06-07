@@ -54,6 +54,11 @@
     <None Include="Copyright.frame" />
     <None Include="Parser.frame" />
     <None Include="Scanner.frame" />
+    <None Include="Tests\test.atg" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Tests\Parser.ts" />
+    <Content Include="Tests\Scanner.ts" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -1,0 +1,29 @@
+﻿COMPILER Test
+
+CHARACTERS
+	letter = 'A'..'Z' + 'a'..'z'.
+	digit = '0'..'9'.
+
+TOKENS
+	ident = letter { letter | digit}.
+	number = digit { digit }.
+
+COMMENTS FROM "/*" TO "*/" NESTED
+COMMENTS FROM "//" TO '\n'
+
+IGNORE '\r' + '\n' + '\t'
+
+PRODUCTIONS
+
+AddOp = ('+'|'-').
+MulOp = ('*' | '/').
+RelOp = ( "==" | '<' | '>' ).
+Expr = SimExpr [ RelOp SimExpr ].
+Factor = (Ident | number | '-' Factor | "true" | "false").
+Ident = ident.
+
+SimExpr = Term { AddOp Term }.
+Term = Factor { MulOp Factor }.
+Test = Expr.
+
+END Test.

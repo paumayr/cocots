@@ -412,19 +412,23 @@ public class DFA {
 
 	//---------- Output primitives
 	private string Ch(int ch) {
-		if (ch < ' ' || ch >= 127 || ch == '\'' || ch == '\\') return Convert.ToString(ch);
+		if (ch < ' ' || ch >= 127 || ch == '\'' || ch == '\\')
+		{
+			return string.Format("\"\\u{0:0000}\"", ch);
+		}
+
 		else return String.Format("'{0}'", (char)ch);
 	}
 	
 	private string ChCond(char ch) {
-		return String.Format("ch == {0}", Ch(ch));
+		return String.Format("this.ch == {0}", Ch(ch));
 	}
 	
 	private void PutRange(CharSet s) {
 		for (CharSet.Range r = s.head; r != null; r = r.next) {
-			if (r.from == r.to) { gen.Write("ch == " + Ch(r.from)); }
-			else if (r.from == 0) { gen.Write("ch <= " + Ch(r.to)); }
-			else { gen.Write("ch >= " + Ch(r.from) + " && ch <= " + Ch(r.to)); }
+			if (r.from == r.to) { gen.Write("this.ch == " + Ch(r.from)); }
+			else if (r.from == 0) { gen.Write("this.ch <= " + Ch(r.to)); }
+			else { gen.Write("this.ch >= " + Ch(r.from) + " && this.ch <= " + Ch(r.to)); }
 			if (r.next != null) gen.Write(" || ");
 		}
 	}
@@ -851,46 +855,46 @@ public class DFA {
 		gen.Write    (  "\t\t\t\tif ({0}) ", ChCond(com.stop[0])); gen.WriteLine("{");
 		if (com.stop.Length == 1) {
 			gen.WriteLine("\t\t\t\t\tlevel--;");
-			gen.WriteLine("\t\t\t\t\tif (level == 0) { oldEols = line - line0; NextCh(); return true; }");
-			gen.WriteLine("\t\t\t\t\tNextCh();");
+			gen.WriteLine("\t\t\t\t\tif (level == 0) { this.oldEols = this.line - line0; this.NextCh(); return true; }");
+			gen.WriteLine("\t\t\t\t\tthis.NextCh();");
 		} else {
-			gen.WriteLine("\t\t\t\t\tNextCh();");
+			gen.WriteLine("\t\t\t\t\tthis.NextCh();");
 			gen.WriteLine("\t\t\t\t\tif ({0}) {{", ChCond(com.stop[1]));
 			gen.WriteLine("\t\t\t\t\t\tlevel--;");
-			gen.WriteLine("\t\t\t\t\t\tif (level == 0) { oldEols = line - line0; NextCh(); return true; }");
-			gen.WriteLine("\t\t\t\t\t\tNextCh();");
+			gen.WriteLine("\t\t\t\t\t\tif (level == 0) { this.oldEols = this.line - line0; this.NextCh(); return true; }");
+			gen.WriteLine("\t\t\t\t\t\tthis.NextCh();");
 			gen.WriteLine("\t\t\t\t\t}");
 		}
 		if (com.nested) {
 			gen.Write    ("\t\t\t\t}"); gen.Write(" else if ({0}) ", ChCond(com.start[0])); gen.WriteLine("{");
 			if (com.start.Length == 1)
-				gen.WriteLine("\t\t\t\t\tlevel++; NextCh();");
+				gen.WriteLine("\t\t\t\t\tlevel++; this.NextCh();");
 			else {
-				gen.WriteLine("\t\t\t\t\tNextCh();");
+				gen.WriteLine("\t\t\t\t\tthis.NextCh();");
 				gen.Write    ("\t\t\t\t\tif ({0}) ", ChCond(com.start[1])); gen.WriteLine("{");
-				gen.WriteLine("\t\t\t\t\t\tlevel++; NextCh();");
+				gen.WriteLine("\t\t\t\t\t\tlevel++; this.NextCh();");
 				gen.WriteLine("\t\t\t\t\t}");
 			}
 		}
-		gen.WriteLine(    "\t\t\t\t} else if (ch == Buffer.EOF) return false;");
-		gen.WriteLine(    "\t\t\t\telse NextCh();");
+		gen.WriteLine(    "\t\t\t\t} else if (this.ch == Buffer.EOF) return false;");
+		gen.WriteLine(    "\t\t\t\telse this.NextCh();");
 		gen.WriteLine(    "\t\t\t}");
 	}
 	
 	void GenComment(Comment com, int i) {
 		gen.WriteLine();
-		gen.Write    ("\tbool Comment{0}() ", i); gen.WriteLine("{");
-		gen.WriteLine("\t\tint level = 1, pos0 = pos, line0 = line, col0 = col, charPos0 = charPos;");
+		gen.Write    ("\tComment{0}() : bool", i); gen.WriteLine("{");
+		gen.WriteLine("\t\tvar level = 1; var pos0 = this.pos; var line0 = this.line; var col0 = this.col; var charPos0 = this.charPos;");
 		if (com.start.Length == 1) {
-			gen.WriteLine("\t\tNextCh();");
+			gen.WriteLine("\t\tthis.NextCh();");
 			GenComBody(com);
 		} else {
-			gen.WriteLine("\t\tNextCh();");
+			gen.WriteLine("\t\tthis.NextCh();");
 			gen.Write    ("\t\tif ({0}) ", ChCond(com.start[1])); gen.WriteLine("{");
-			gen.WriteLine("\t\t\tNextCh();");
+			gen.WriteLine("\t\t\tthis.NextCh();");
 			GenComBody(com);
 			gen.WriteLine("\t\t} else {");
-			gen.WriteLine("\t\t\tbuffer.Pos = pos0; NextCh(); line = line0; col = col0; charPos = charPos0;");
+			gen.WriteLine("\t\t\tthis.buffer.Pos = pos0; this.NextCh(); this.line = line0; this.col = col0; this.charPos = charPos0;");
 			gen.WriteLine("\t\t}");
 			gen.WriteLine("\t\treturn false;");
 		}
@@ -985,7 +989,7 @@ public class DFA {
 	public void WriteScanner() {
 		Generator g = new Generator(tab);
 		fram = g.OpenFrame("Scanner.frame");
-		gen = g.OpenGen("Scanner.cs");
+		gen = g.OpenGen("Scanner.ts");
 		if (dirtyDFA) MakeDeterministic();
 
 		g.GenCopyright();
@@ -993,27 +997,36 @@ public class DFA {
 
 		g.CopyFramePart("-->namespace");
 		if (tab.nsName != null && tab.nsName.Length > 0) {
-			gen.Write("namespace ");
+			gen.Write("module ");
 			gen.Write(tab.nsName);
 			gen.Write(" {");
 		}
 		g.CopyFramePart("-->declarations");
-		gen.WriteLine("\tconst int maxT = {0};", tab.terminals.Count - 1);
-		gen.WriteLine("\tconst int noSym = {0};", tab.noSym.n);
+		gen.WriteLine("\tstatic maxT : number = {0};", tab.terminals.Count - 1);
+		gen.WriteLine("\tstatic noSym : number = {0};", tab.noSym.n);
 		if (ignoreCase)
-			gen.Write("\tchar valCh;       // current input character (for token.val)");
+			gen.Write("\tstatic valCh : string;       // current input character (for token.val)");
 		g.CopyFramePart("-->initialization");
 		WriteStartTab();
 		g.CopyFramePart("-->casing1");
 		if (ignoreCase) {
 			gen.WriteLine("\t\tif (ch != Buffer.EOF) {");
-			gen.WriteLine("\t\t\tvalCh = (char) ch;");
-			gen.WriteLine("\t\t\tch = char.ToLower((char) ch);");
+			gen.WriteLine("\t\t\tvalCh = ch;");
+			gen.WriteLine("\t\t\tch = ch.toLowerCase();");
 			gen.WriteLine("\t\t}");
 		}
 		g.CopyFramePart("-->casing2");
-		gen.Write("\t\t\ttval[tlen++] = ");
-		if (ignoreCase) gen.Write("valCh;"); else gen.Write("(char) ch;");
+		gen.Write("\t\t\tthis.tval.push(");
+		if (ignoreCase)
+		{
+			gen.Write("this.valCh");
+		}
+		else
+		{
+			gen.Write("this.ch");
+		}
+		gen.WriteLine(");");
+
 		g.CopyFramePart("-->comments");
 		Comment com = firstComment; 
 		int comIdx = 0;
