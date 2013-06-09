@@ -975,11 +975,12 @@ public class DFA {
 		for (Action action = firstState.firstAction; action != null; action = action.next) {
 			int targetState = action.target.state.nr;
 			if (action.typ == Node.chr) {
-				gen.WriteLine("\t\tstart[" + action.sym + "] = " + targetState + "; ");
+				string c = Char.ConvertFromUtf32(action.sym);
+				gen.WriteLine("\t\tstart['" + c + "'] = " + targetState + "; ");
 			} else {
 				CharSet s = tab.CharClassSet(action.sym);
 				for (CharSet.Range r = s.head; r != null; r = r.next) {
-					gen.WriteLine("\t\tfor (var i : number = " + r.from + "; i <= " + r.to + "; ++i) start[i] = " + targetState + ";");
+					gen.WriteLine("\t\tfor (var i : number = " + r.from + "; i <= " + r.to + "; ++i) start[String.fromCharCode(i)] = " + targetState + ";");
 				}
 			}
 		}

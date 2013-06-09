@@ -104,7 +104,7 @@ export class Scanner {
 	
 	tval = []; // text of current token // TODO use TS 0.9 generics
 	
-	static Scanner() {
+	static InitStartTab() {
 		start = {};
 -->initialization
 	}
@@ -182,7 +182,7 @@ export class Scanner {
 		this.t.line = this.line;
 		this.t.charPos = this.charPos;
 		var state : number;
-		if (Scanner.start.ContainsKey(this.ch)) {
+		if (Scanner.start[this.ch] != undefined) {
 			state = Scanner.start[this.ch];
 		}
 		else
@@ -196,6 +196,7 @@ export class Scanner {
 		var done : bool = false;
 		while(!done)
 		{
+			done = true;
 		switch (state) {
 			case -1: 
 			{ 
@@ -215,8 +216,8 @@ export class Scanner {
 		}
 		}
 
-		this.t.val = this.tval.join();
-		return t;
+		this.t.val = this.tval.join("");
+		return this.t;
 	}
 	
 	private SetScannerBehindT() {
@@ -254,3 +255,4 @@ export class Scanner {
 	public ResetPeek () { this.pt = this.tokens; }
 
 } // end Scanner
+Scanner.InitStartTab();

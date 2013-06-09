@@ -1,0 +1,10 @@
+﻿{
+    "Framework": "qunit",
+    "TestFileTimeout": "5000",
+    "TestHarnessLocationMode": "TestFileAdjacent",
+    "TestHarnessDirectory": "",
+    "TypeScriptCodeGenTarget" : "ES5",
+    "RootReferencePathMode":"SettingsFileDirectory",
+    "CodeCoverageIncludes": [],
+    "CodeCoverageExcludes": []
+}

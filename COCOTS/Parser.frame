@@ -55,7 +55,7 @@ export class Parser {
 	{
 		if (this.errDist >= Parser.minErrDist)
 		{
-			this.errors.SynErr(this.la.line, this.la.col, n);
+			this.errors.SynErrPositioned(this.la.line, this.la.col, n);
 		}
 
 		this.errDist = 0;
@@ -65,7 +65,7 @@ export class Parser {
 	{
 		if (this.errDist >= Parser.minErrDist)
 		{
-			this.errors.SemErr(this.t.line, this.t.col, msg);
+			this.errors.SemErrPositioned(this.t.line, this.t.col, msg);
 		}
 
 		this.errDist = 0;
@@ -140,40 +140,51 @@ export class Parser {
 	];
 } // end Parser
 
+export interface ErrorStream
+{
+	WriteFormattedLine : (errorFormat : string, line : number, column : number, message : string) => void;
+	WriteLine :  (message : string) => void;
 
-public class Errors {
+}
+
+export class Errors {
 	public count : number = 0;                                    // number of errors detected
 
-	public SynErr (line : number, col : number, n : number) {
+	public errorStream : ErrorStream;
+
+	public errMsgFormat : string;
+
+	Errors(_errorStream : ErrorStream, _errMsgFormat : string)
+	{
+		this.errorStream = _errorStream;
+		this.errMsgFormat = _errMsgFormat;
+	}
+
+	public SynErrPositioned (line : number, col : number, n : number) {
 		var s : string;
 		switch (n) {
 -->errors
 			default: s = "error " + n; break;
 		}
-		// TODO: write error errorStream.WriteLine(errMsgFormat, line, col, s);
+		this.errorStream.WriteFormattedLine(this.errMsgFormat, line, col, s);
 		this.count++;
 	}
 
-	public virtual SemErr (line : number, col : number, s : string) {
-		errorStream.WriteLine(errMsgFormat, line, col, s);
+	public SemErrPositioned (line : number, col : number, s : string) {
+		this.errorStream.WriteFormattedLine(this.errMsgFormat, line, col, s);
 		this.count++;
 	}
 	
 	public SemErr (s : string) {
-		errorStream.WriteLine(s);
+		this.errorStream.WriteLine(s);
 		this.count++;
 	}
 	
-	public Warning (line : number, col : number, s : string) {
-		errorStream.WriteLine(errMsgFormat, line, col, s);
+	public WarningPositioned (line : number, col : number, s : string) {
+		this.errorStream.WriteFormattedLine(this.errMsgFormat, line, col, s);
 	}
 	
 	public Warning(s : string) {
-		errorStream.WriteLine(s);
+		this.errorStream.WriteLine(s);
 	}
 } // Errors
-
-
-public class FatalError: Exception {
-	public FatalError(string m): base(m) {}
-}

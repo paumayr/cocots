@@ -26,7 +26,7 @@ Coco/R itself) does not fall under the GNU General Public License.
 -----------------------------------------------------------------------*/
 
 
-module test {
+module testlanguage {
 
 
 
@@ -36,6 +36,13 @@ export class Parser {
 	public static _EOF : number = 0;
 	public static _ident : number = 1;
 	public static _number : number = 2;
+	public static _plus : number = 3;
+	public static _minus : number = 4;
+	public static _mult : number = 5;
+	public static _div : number = 6;
+	public static _lesser : number = 7;
+	public static _greater : number = 8;
+	public static _equals : number = 9;
 	public static maxT : number = 12;
 
 	static T : bool = true;
@@ -61,7 +68,7 @@ export class Parser {
 	{
 		if (this.errDist >= Parser.minErrDist)
 		{
-			this.errors.SynErr(this.la.line, this.la.col, n);
+			this.errors.SynErrPositioned(this.la.line, this.la.col, n);
 		}
 
 		this.errDist = 0;
@@ -71,7 +78,7 @@ export class Parser {
 	{
 		if (this.errDist >= Parser.minErrDist)
 		{
-			this.errors.SemErr(this.t.line, this.t.col, msg);
+			this.errors.SemErrPositioned(this.t.line, this.t.col, msg);
 		}
 
 		this.errDist = 0;
@@ -149,11 +156,11 @@ export class Parser {
 	}
 
 	RelOp() {
-		if (this.la.kind == 7) {
+		if (this.la.kind == 9) {
+			this.Get();
+		} else if (this.la.kind == 7) {
 			this.Get();
 		} else if (this.la.kind == 8) {
-			this.Get();
-		} else if (this.la.kind == 9) {
 			this.Get();
 		} else this.SynErr(15);
 	}
@@ -222,23 +229,39 @@ export class Parser {
 	];
 } // end Parser
 
+export interface ErrorStream
+{
+	WriteFormattedLine : (errorFormat : string, line : number, column : number, message : string) => void;
+	WriteLine :  (message : string) => void;
 
-public class Errors {
+}
+
+export class Errors {
 	public count : number = 0;                                    // number of errors detected
 
-	public SynErr (line : number, col : number, n : number) {
+	public errorStream : ErrorStream;
+
+	public errMsgFormat : string;
+
+	Errors(_errorStream : ErrorStream, _errMsgFormat : string)
+	{
+		this.errorStream = _errorStream;
+		this.errMsgFormat = _errMsgFormat;
+	}
+
+	public SynErrPositioned (line : number, col : number, n : number) {
 		var s : string;
 		switch (n) {
 			case 0: s = "EOF expected"; break;
 			case 1: s = "ident expected"; break;
 			case 2: s = "number expected"; break;
-			case 3: s = "\"+\" expected"; break;
-			case 4: s = "\"-\" expected"; break;
-			case 5: s = "\"*\" expected"; break;
-			case 6: s = "\"/\" expected"; break;
-			case 7: s = "\"==\" expected"; break;
-			case 8: s = "\"<\" expected"; break;
-			case 9: s = "\">\" expected"; break;
+			case 3: s = "plus expected"; break;
+			case 4: s = "minus expected"; break;
+			case 5: s = "mult expected"; break;
+			case 6: s = "div expected"; break;
+			case 7: s = "lesser expected"; break;
+			case 8: s = "greater expected"; break;
+			case 9: s = "equals expected"; break;
 			case 10: s = "\"true\" expected"; break;
 			case 11: s = "\"false\" expected"; break;
 			case 12: s = "??? expected"; break;
@@ -249,31 +272,26 @@ public class Errors {
 
 			default: s = "error " + n; break;
 		}
-		// TODO: write error errorStream.WriteLine(errMsgFormat, line, col, s);
+		this.errorStream.WriteFormattedLine(this.errMsgFormat, line, col, s);
 		this.count++;
 	}
 
-	public virtual SemErr (line : number, col : number, s : string) {
-		errorStream.WriteLine(errMsgFormat, line, col, s);
+	public SemErrPositioned (line : number, col : number, s : string) {
+		this.errorStream.WriteFormattedLine(this.errMsgFormat, line, col, s);
 		this.count++;
 	}
 	
 	public SemErr (s : string) {
-		errorStream.WriteLine(s);
+		this.errorStream.WriteLine(s);
 		this.count++;
 	}
 	
-	public Warning (line : number, col : number, s : string) {
-		errorStream.WriteLine(errMsgFormat, line, col, s);
+	public WarningPositioned (line : number, col : number, s : string) {
+		this.errorStream.WriteFormattedLine(this.errMsgFormat, line, col, s);
 	}
 	
 	public Warning(s : string) {
-		errorStream.WriteLine(s);
+		this.errorStream.WriteLine(s);
 	}
 } // Errors
-
-
-public class FatalError: Exception {
-	public FatalError(string m): base(m) {}
-}
 }

@@ -7,6 +7,13 @@ CHARACTERS
 TOKENS
 	ident = letter { letter | digit}.
 	number = digit { digit }.
+	plus = '+'.
+	minus = '-'.
+	mult = '*'.
+	div = '/'.
+	lesser = '<'.
+	greater = '>'.
+	equals = "==".
 
 COMMENTS FROM "/*" TO "*/" NESTED
 COMMENTS FROM "//" TO '\n'
@@ -15,9 +22,9 @@ IGNORE '\r' + '\n' + '\t'
 
 PRODUCTIONS
 
-AddOp = ('+'|'-').
-MulOp = ('*' | '/').
-RelOp = ( "==" | '<' | '>' ).
+AddOp = (plus|minus).
+MulOp = (mult | div).
+RelOp = ( equals | lesser | greater ).
 Expr = SimExpr [ RelOp SimExpr ].
 Factor = (Ident | number | '-' Factor | "true" | "false").
 Ident = ident.
