@@ -26,15 +26,17 @@ Coco/R itself) does not fall under the GNU General Public License.
 -----------------------------------------------------------------------*/
 
 
-namespace test {
+module test {
 
 
 
-public class Parser {
-	public const int _EOF = 0;
-	public const int _ident = 1;
-	public const int _number = 2;
-	public const int maxT = 12;
+/// <reference path="Scanner.ts" />
+
+export class Parser {
+	public static _EOF : number = 0;
+	public static _ident : number = 1;
+	public static _number : number = 2;
+	public static maxT : number = 12;
 
 	static T : bool = true;
 	static x : bool = false;
@@ -45,7 +47,7 @@ public class Parser {
 
 	public t : Token;    // last recognized token
 	public la : Token;   // lookahead token
-	public errDist = minErrDist;
+	public errDist = Parser.minErrDist;
 
 
 
@@ -57,42 +59,42 @@ public class Parser {
 
 	SynErr (n : number)
 	{
-		if (errDist >= minErrDist)
+		if (this.errDist >= Parser.minErrDist)
 		{
-			errors.SynErr(la.line, la.col, n);
+			this.errors.SynErr(this.la.line, this.la.col, n);
 		}
 
-		errDist = 0;
+		this.errDist = 0;
 	}
 
-	public void SemErr (msg : string)
+	SemErr (msg : string)
 	{
-		if (errDist >= minErrDist)
+		if (this.errDist >= Parser.minErrDist)
 		{
-			errors.SemErr(t.line, t.col, msg);
+			this.errors.SemErr(this.t.line, this.t.col, msg);
 		}
 
-		errDist = 0;
+		this.errDist = 0;
 	}
 	
 	Get ()
 	{
 		for (;;)
 		{
-			t = la;
-			la = scanner.Scan();
-			if (la.kind <= maxT) 
+			this.t = this.la;
+			this.la = this.scanner.Scan();
+			if (this.la.kind <= Parser.maxT) 
 			{ 
-				++errDist; 
+				this.errDist++; 
 				break; 
 			}
 
-			la = t;
+			this.la = this.t;
 		}
 	}
 	
 	Expect (n : number) {
-		if (la.kind == n)
+		if (this.la.kind == n)
 		{
 			this.Get(); 
 		}
@@ -103,121 +105,121 @@ public class Parser {
 	}
 	
 	StartOf (s : number) : bool {
-		return set[s, la.kind];
+		return Parser.stateset[s][this.la.kind];
 	}
 	
-	void ExpectWeak (n : number, follow : number) {
-		if (la.kind == n) Get();
+	ExpectWeak (n : number, follow : number) {
+		if (this.la.kind == n) this.Get();
 		else {
-			SynErr(n);
-			while (!StartOf(follow)) Get();
+			this.SynErr(n);
+			while (!this.StartOf(follow)) this.Get();
 		}
 	}
 
 
 	WeakSeparator(n : number, syFol : number, repFol : number) : bool {
-		int kind = la.kind;
-		if (kind == n) {Get(); return true;}
-		else if (StartOf(repFol)) {return false;}
+		var kind = this.la.kind;
+		if (kind == n) {this.Get(); return true;}
+		else if (this.StartOf(repFol)) {return false;}
 		else {
-			SynErr(n);
-			while (!(set[syFol, kind] || set[repFol, kind] || set[0, kind])) {
-				Get();
-				kind = la.kind;
+			this.SynErr(n);
+			while (!(Parser.stateset[syFol, kind] || Parser.stateset[repFol, kind] || Parser.stateset[0, kind])) {
+				this.Get();
+				kind = this.la.kind;
 			}
-			return StartOf(syFol);
+			return this.StartOf(syFol);
 		}
 	}
 
 	
-	void AddOp() {
-		if (la.kind == 3) {
-			Get();
-		} else if (la.kind == 4) {
-			Get();
-		} else SynErr(13);
+	AddOp() {
+		if (this.la.kind == 3) {
+			this.Get();
+		} else if (this.la.kind == 4) {
+			this.Get();
+		} else this.SynErr(13);
 	}
 
-	void MulOp() {
-		if (la.kind == 5) {
-			Get();
-		} else if (la.kind == 6) {
-			Get();
-		} else SynErr(14);
+	MulOp() {
+		if (this.la.kind == 5) {
+			this.Get();
+		} else if (this.la.kind == 6) {
+			this.Get();
+		} else this.SynErr(14);
 	}
 
-	void RelOp() {
-		if (la.kind == 7) {
-			Get();
-		} else if (la.kind == 8) {
-			Get();
-		} else if (la.kind == 9) {
-			Get();
-		} else SynErr(15);
+	RelOp() {
+		if (this.la.kind == 7) {
+			this.Get();
+		} else if (this.la.kind == 8) {
+			this.Get();
+		} else if (this.la.kind == 9) {
+			this.Get();
+		} else this.SynErr(15);
 	}
 
-	void Expr() {
-		SimExpr();
-		if (la.kind == 7 || la.kind == 8 || la.kind == 9) {
-			RelOp();
-			SimExpr();
+	Expr() {
+		this.SimExpr();
+		if (this.la.kind == 7 || this.la.kind == 8 || this.la.kind == 9) {
+			this.RelOp();
+			this.SimExpr();
 		}
 	}
 
-	void SimExpr() {
-		Term();
-		while (la.kind == 3 || la.kind == 4) {
-			AddOp();
-			Term();
+	SimExpr() {
+		this.Term();
+		while (this.la.kind == 3 || this.la.kind == 4) {
+			this.AddOp();
+			this.Term();
 		}
 	}
 
-	void Factor() {
-		if (la.kind == 1) {
-			Ident();
-		} else if (la.kind == 2) {
-			Get();
-		} else if (la.kind == 4) {
-			Get();
-			Factor();
-		} else if (la.kind == 10) {
-			Get();
-		} else if (la.kind == 11) {
-			Get();
-		} else SynErr(16);
+	Factor() {
+		if (this.la.kind == 1) {
+			this.Ident();
+		} else if (this.la.kind == 2) {
+			this.Get();
+		} else if (this.la.kind == 4) {
+			this.Get();
+			this.Factor();
+		} else if (this.la.kind == 10) {
+			this.Get();
+		} else if (this.la.kind == 11) {
+			this.Get();
+		} else this.SynErr(16);
 	}
 
-	void Ident() {
-		Expect(1);
+	Ident() {
+		this.Expect(1);
 	}
 
-	void Term() {
-		Factor();
-		while (la.kind == 5 || la.kind == 6) {
-			MulOp();
-			Factor();
+	Term() {
+		this.Factor();
+		while (this.la.kind == 5 || this.la.kind == 6) {
+			this.MulOp();
+			this.Factor();
 		}
 	}
 
-	void Test() {
-		Expr();
+	Test() {
+		this.Expr();
 	}
 
 
 
 	public Parse() {
-		la = new Token();
-		la.val = "";		
-		Get();
-		Test();
-		Expect(0);
+		this.la = new Token();
+		this.la.val = "";		
+		this.Get();
+		this.Test();
+		this.Expect(0);
 
 	}
 	
-	static set : bool[][] = {
-		{T,x,x,x, x,x,x,x, x,x,x,x, x,x}
+	static stateset : bool[][] = [
+		[true,false,false,false, false,false,false,false, false,false,false,false, false,false]
 
-	};
+	];
 } // end Parser
 
 
@@ -248,17 +250,17 @@ public class Errors {
 			default: s = "error " + n; break;
 		}
 		// TODO: write error errorStream.WriteLine(errMsgFormat, line, col, s);
-		count++;
+		this.count++;
 	}
 
 	public virtual SemErr (line : number, col : number, s : string) {
 		errorStream.WriteLine(errMsgFormat, line, col, s);
-		count++;
+		this.count++;
 	}
 	
 	public SemErr (s : string) {
 		errorStream.WriteLine(s);
-		count++;
+		this.count++;
 	}
 	
 	public Warning (line : number, col : number, s : string) {

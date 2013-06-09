@@ -16,3 +16,5 @@
 /COCOTS/bin/Debug
 /COCOTS/obj/Debug
 /CocoTS.Test/obj/Debug
+/COCOTS/Tests/Parser.ts.old
+/COCOTS/Tests/Scanner.ts.old

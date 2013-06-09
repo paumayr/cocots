@@ -149,13 +149,13 @@ public class ParserGen {
 			else if (n <= maxTerm)
 				foreach (Symbol sym in tab.terminals) {
 					if (s[sym.n]) {
-						gen.Write("la.kind == {0}", sym.n);
+						gen.Write("this.la.kind == {0}", sym.n);
 						--n;
 						if (n > 0) gen.Write(" || ");
 					}
 				}
 			else
-				gen.Write("StartOf({0})", NewCondSet(s));
+				gen.Write("this.StartOf({0})", NewCondSet(s));
 		}
 	}
 		
@@ -171,7 +171,7 @@ public class ParserGen {
 			switch (p.typ) {
 				case Node.nt: {
 					Indent(indent);
-					gen.Write(p.sym.name + "(");
+					gen.Write("this." + p.sym.name + "(");
 					CopySourcePart(p.pos, 0);
 					gen.WriteLine(");");
 					break;
@@ -179,15 +179,15 @@ public class ParserGen {
 				case Node.t: {
 					Indent(indent);
 					// assert: if isChecked[p.sym.n] is true, then isChecked contains only p.sym.n
-					if (isChecked[p.sym.n]) gen.WriteLine("Get();");
-					else gen.WriteLine("Expect({0});", p.sym.n);
+					if (isChecked[p.sym.n]) gen.WriteLine("this.Get();");
+					else gen.WriteLine("this.Expect({0});", p.sym.n);
 					break;
 				}
 				case Node.wt: {
 					Indent(indent);
 					s1 = tab.Expected(p.next, curSy);
 					s1.Or(tab.allSyncSets);
-					gen.WriteLine("ExpectWeak({0}, {1});", p.sym.n, NewCondSet(s1));
+					gen.WriteLine("this.ExpectWeak({0}, {1});", p.sym.n, NewCondSet(s1));
 					break;
 				}
 				case Node.any: {
@@ -195,12 +195,12 @@ public class ParserGen {
 					int acc = Sets.Elements(p.set);
 					if (tab.terminals.Count == (acc + 1) || (acc > 0 && Sets.Equals(p.set, isChecked))) {
 						// either this ANY accepts any terminal (the + 1 = end of file), or exactly what's allowed here
-						gen.WriteLine("Get();");
+						gen.WriteLine("this.Get();");
 					} else {
 						GenErrorMsg(altErr, curSy);
 						if (acc > 0) {
-							gen.Write("if ("); GenCond(p.set, p); gen.WriteLine(") Get(); else SynErr({0});", errorNr);
-						} else gen.WriteLine("SynErr({0}); // ANY node that matches no symbol", errorNr);
+							gen.Write("if ("); GenCond(p.set, p); gen.WriteLine(") this.Get(); else this.SynErr({0});", errorNr);
+						} else gen.WriteLine("this.SynErr({0}); // ANY node that matches no symbol", errorNr);
 					}
 					break;
 				}
@@ -215,14 +215,14 @@ public class ParserGen {
 					GenErrorMsg(syncErr, curSy);
 					s1 = (BitArray)p.set.Clone();
 					gen.Write("while (!("); GenCond(s1, p); gen.Write(")) {");
-					gen.Write("SynErr({0}); Get();", errorNr); gen.WriteLine("}");
+					gen.Write("this.SynErr({0}); Get();", errorNr); gen.WriteLine("}");
 					break;
 				}
 				case Node.alt: {
 					s1 = tab.First(p);
 					bool equal = Sets.Equals(s1, isChecked);
 					bool useSwitch = UseSwitch(p);
-					if (useSwitch) { Indent(indent); gen.WriteLine("switch (la.kind) {"); }
+					if (useSwitch) { Indent(indent); gen.WriteLine("switch (this.la.kind) {"); }
 					p2 = p;
 					while (p2 != null) {
 						s1 = tab.Expected(p2.sub, curSy);
@@ -248,10 +248,10 @@ public class ParserGen {
 					} else {
 						GenErrorMsg(altErr, curSy);
 						if (useSwitch) {
-							gen.WriteLine("default: SynErr({0}); break;", errorNr);
+							gen.WriteLine("default: this.SynErr({0}); break;", errorNr);
 							Indent(indent); gen.WriteLine("}");
 						} else {
-							gen.Write("} "); gen.WriteLine("else SynErr({0});", errorNr);
+							gen.Write("} "); gen.WriteLine("else this.SynErr({0});", errorNr);
 						}
 					}
 					break;
@@ -263,7 +263,7 @@ public class ParserGen {
 					if (p2.typ == Node.wt) {
 						s1 = tab.Expected(p2.next, curSy);
 						s2 = tab.Expected(p.next, curSy);
-						gen.Write("WeakSeparator({0},{1},{2}) ", p2.sym.n, NewCondSet(s1), NewCondSet(s2));
+						gen.Write("this.WeakSeparator({0},{1},{2}) ", p2.sym.n, NewCondSet(s1), NewCondSet(s2));
 						s1 = new BitArray(tab.terminals.Count);  // for inner structure
 						if (p2.up || p2.next == null) p2 = null; else p2 = p2.next;
 					} else {
@@ -291,21 +291,26 @@ public class ParserGen {
 	}
 	
 	void GenTokens() {
-		foreach (Symbol sym in tab.terminals) {
+		foreach (Symbol sym in tab.terminals)
+		{
 			if (Char.IsLetter(sym.name[0]))
-				gen.WriteLine("\tpublic const int _{0} = {1};", sym.name, sym.n);
+			{
+				// TODO: use const from ES6
+				gen.WriteLine("\tpublic static _{0} : number = {1};", sym.name, sym.n);
+			}
 		}
 	}
 	
 	void GenPragmas() {
 		foreach (Symbol sym in tab.pragmas) {
-			gen.WriteLine("\tpublic const int _{0} = {1};", sym.name, sym.n);
+			// TODO: use const from ES6
+			gen.WriteLine("\tpublic static _{0} : number = {1};", sym.name, sym.n);
 		}
 	}
 
 	void GenCodePragmas() {
 		foreach (Symbol sym in tab.pragmas) {
-			gen.WriteLine("\t\t\t\tif (la.kind == {0}) {{", sym.n);
+			gen.WriteLine("\t\t\t\tif (this.la.kind == {0}) {{", sym.n);
 			CopySourcePart(sym.semPos, 4);
 			gen.WriteLine("\t\t\t\t}");
 		}
@@ -314,7 +319,7 @@ public class ParserGen {
 	void GenProductions() {
 		foreach (Symbol sym in tab.nonterminals) {
 			curSy = sym;
-			gen.Write("\tvoid {0}(", sym.name);
+			gen.Write("\t{0}(", sym.name);
 			CopySourcePart(sym.attrPos, 0);
 			gen.WriteLine(") {");
 			CopySourcePart(sym.semPos, 2);
@@ -326,14 +331,14 @@ public class ParserGen {
 	void InitSets() {
 		for (int i = 0; i < symSet.Count; i++) {
 			BitArray s = (BitArray)symSet[i];
-			gen.Write("\t\t{");
+			gen.Write("\t\t[");
 			int j = 0;
 			foreach (Symbol sym in tab.terminals) {
-				if (s[sym.n]) gen.Write("T,"); else gen.Write("x,");
+				if (s[sym.n]) gen.Write("true,"); else gen.Write("false,");
 				++j;
 				if (j%4 == 0) gen.Write(" ");
 			}
-			if (i == symSet.Count-1) gen.WriteLine("x}"); else gen.WriteLine("x},");
+			if (i == symSet.Count-1) gen.WriteLine("false]"); else gen.WriteLine("false],");
 		}
 	}
 
@@ -354,17 +359,17 @@ public class ParserGen {
 		g.CopyFramePart("-->namespace");
 		/* AW open namespace, if it exists */
 		if (tab.nsName != null && tab.nsName.Length > 0) {
-			gen.WriteLine("namespace {0} {{", tab.nsName);
+			gen.WriteLine("module {0} {{", tab.nsName);
 			gen.WriteLine();
 		}
 		g.CopyFramePart("-->constants");
 		GenTokens(); /* ML 2002/09/07 write the token kinds */
-		gen.WriteLine("\tpublic const int maxT = {0};", tab.terminals.Count-1);
+		gen.WriteLine("\tpublic static maxT : number = {0};", tab.terminals.Count-1);
 		GenPragmas(); /* ML 2005/09/23 write the pragma kinds */
 		g.CopyFramePart("-->declarations"); CopySourcePart(tab.semDeclPos, 0);
 		g.CopyFramePart("-->pragmas"); GenCodePragmas();
 		g.CopyFramePart("-->productions"); GenProductions();
-		g.CopyFramePart("-->parseRoot"); gen.WriteLine("\t\t{0}();", tab.gramSy.name); if (tab.checkEOF) gen.WriteLine("\t\tExpect(0);");
+		g.CopyFramePart("-->parseRoot"); gen.WriteLine("\t\tthis.{0}();", tab.gramSy.name); if (tab.checkEOF) gen.WriteLine("\t\tthis.Expect(0);");
 		g.CopyFramePart("-->initialization"); InitSets();
 		g.CopyFramePart("-->errors"); gen.Write(err.ToString());
 		g.CopyFramePart(null);
