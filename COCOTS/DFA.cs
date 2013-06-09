@@ -911,9 +911,9 @@ public class DFA {
 	
 	void GenLiterals () {
 		if (ignoreCase) {
-			gen.WriteLine("\t\tswitch (t.val.ToLower()) {");
+			gen.WriteLine("\t\tswitch (this.t.val.ToLower()) {");
 		} else {
-			gen.WriteLine("\t\tswitch (t.val) {");
+			gen.WriteLine("\t\tswitch (this.t.val) {");
 		}
 		foreach (IList ts in new IList[] { tab.terminals, tab.pragmas }) {
 			foreach (Symbol sym in ts) {
@@ -921,7 +921,7 @@ public class DFA {
 					string name = SymName(sym);
 					if (ignoreCase) name = name.ToLower();
 					// sym.name stores literals with quotes, e.g. "\"Literal\""
-					gen.WriteLine("\t\t\tcase {0}: t.kind = {1}; break;", name, sym.n);
+					gen.WriteLine("\t\t\tcase {0}: this.t.kind = {1}; break;", name, sym.n);
 				}
 			}
 		}
@@ -933,7 +933,7 @@ public class DFA {
 		Symbol endOf = state.endOf;
 		gen.WriteLine("\t\t\tcase {0}:", state.nr);
 		if (endOf != null && state.firstAction != null) {
-			gen.WriteLine("\t\t\t\trecEnd = pos; recKind = {0};", endOf.n);
+			gen.WriteLine("\t\t\t\trecEnd = this.pos; recKind = {0};", endOf.n);
 		}
 		bool ctxEnd = state.ctx;
 		for (Action action = state.firstAction; action != null; action = action.next) {
@@ -946,7 +946,7 @@ public class DFA {
 				gen.Write("apx++; "); ctxEnd = false;
 			} else if (state.ctx)
 				gen.Write("apx = 0; ");
-			gen.Write("AddCh(); goto case {0};", action.target.state.nr);
+			gen.Write("this.AddCh(); state = {0}; done = false; break;", action.target.state.nr);
 			gen.WriteLine("}");
 		}
 		if (state.firstAction == null)
@@ -956,15 +956,15 @@ public class DFA {
 		if (ctxEnd) { // final context state: cut appendix
 			gen.WriteLine();
 			gen.WriteLine("\t\t\t\t\ttlen -= apx;");
-			gen.WriteLine("\t\t\t\t\tSetScannerBehindT();");
+			gen.WriteLine("\t\t\t\t\tthis.SetScannerBehindT();");
 			gen.Write("\t\t\t\t\t");
 		}
 		if (endOf == null) {
-			gen.WriteLine("goto case 0;}");
+			gen.WriteLine("state = 0; done = false; break;}");
 		} else {
-			gen.Write("t.kind = {0}; ", endOf.n);
+			gen.Write("this.t.kind = {0}; ", endOf.n);
 			if (endOf.tokenKind == Symbol.classLitToken) {
-				gen.WriteLine("t.val = new String(tval, 0, tlen); CheckLiteral(); return t;}");
+				gen.WriteLine("this.t.val = this.tval.join(\"\"); this.CheckLiteral(); return this.t;}");
 			} else {
 				gen.WriteLine("break;}");
 			}
@@ -979,7 +979,7 @@ public class DFA {
 			} else {
 				CharSet s = tab.CharClassSet(action.sym);
 				for (CharSet.Range r = s.head; r != null; r = r.next) {
-					gen.WriteLine("\t\tfor (int i = " + r.from + "; i <= " + r.to + "; ++i) start[i] = " + targetState + ";");
+					gen.WriteLine("\t\tfor (var i : number = " + r.from + "; i <= " + r.to + "; ++i) start[i] = " + targetState + ";");
 				}
 			}
 		}
@@ -1044,13 +1044,13 @@ public class DFA {
 			com = firstComment; comIdx = 0;
 			while (com != null) {
 				gen.Write(ChCond(com.start[0]));
-				gen.Write(" && Comment{0}()", comIdx);
+				gen.Write(" && this.Comment{0}()", comIdx);
 				if (com.next != null) gen.Write(" ||");
 				com = com.next; comIdx++;
 			}
-			gen.Write(") return NextToken();");
+			gen.Write(") return this.NextToken();");
 		}
-		if (hasCtxMoves) { gen.WriteLine(); gen.Write("\t\tint apx = 0;"); } /* pdt */
+		if (hasCtxMoves) { gen.WriteLine(); gen.Write("\t\tvar apx : number = 0;"); } /* pdt */
 		g.CopyFramePart("-->scan3");
 		for (State state = firstState.next; state != null; state = state.next)
 			WriteState(state);

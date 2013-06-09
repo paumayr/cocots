@@ -102,7 +102,7 @@ export class Scanner {
 	tokens : Token;     // list of tokens already peeked (first token is a dummy)
 	pt : Token;         // current peek token
 	
-	tval : Array = []; // text of current token // TODO use TS 0.9 generics
+	tval = []; // text of current token // TODO use TS 0.9 generics
 	
 	static Scanner() {
 		start = {};
@@ -174,16 +174,16 @@ export class Scanner {
 -->scan1
 		) this.NextCh();
 -->scan2
-		var recKind = noSym;
-		var recEnd = pos;
+		var recKind = Scanner.noSym;
+		var recEnd = this.pos;
 		this.t = new Token();
-		this.t.pos = pos;
-		this.t.col = col;
-		this.t.line = line;
-		this.t.charPos = charPos;
-		state : number;
-		if (start.ContainsKey(ch)) {
-			this.state = this.start[ch];
+		this.t.pos = this.pos;
+		this.t.col = this.col;
+		this.t.line = this.line;
+		this.t.charPos = this.charPos;
+		var state : number;
+		if (Scanner.start.ContainsKey(this.ch)) {
+			state = Scanner.start[this.ch];
 		}
 		else
 		{ 
@@ -193,22 +193,26 @@ export class Scanner {
 		this.tval = [];
 		this.AddCh();
 		
+		var done : bool = false;
+		while(!done)
+		{
 		switch (state) {
 			case -1: 
 			{ 
-				this.t.kind = eofSym; 
+				this.t.kind = Scanner.eofSym; 
 				break; 
 			} // NextCh already done
 			case 0:
 			{
-				if (recKind != noSym) {
-					tlen = recEnd - this.t.pos;
+				if (recKind != Scanner.noSym) {
+					this.tval = this.tval.slice(0, recEnd);
 					this.SetScannerBehindT();
 				}
 				this.t.kind = recKind; 
 				break;
 			} // NextCh already done
 -->scan3
+		}
 		}
 
 		this.t.val = this.tval.join();
@@ -218,19 +222,19 @@ export class Scanner {
 	private SetScannerBehindT() {
 		this.buffer.Pos = this.t.pos;
 		this.NextCh();
-		this.line = t.line; 
-		this.col = t.col; 
-		this.charPos = t.charPos;
-		for (i : number = 0; i < this.tval.length; i++) NextCh();
+		this.line = this.t.line; 
+		this.col = this.t.col; 
+		this.charPos = this.t.charPos;
+		for (var i : number = 0; i < this.tval.length; i++) this.NextCh();
 	}
 	
 	// get the next token (possibly a token already seen during peeking)
 	public Scan () : Token {
-		if (tokens.next == null) {
-			return NextToken();
+		if (this.tokens.next == null) {
+			return this.NextToken();
 		} else {
-			pt = tokens = tokens.next;
-			return tokens;
+			this.pt = this.tokens = this.tokens.next;
+			return this.tokens;
 		}
 	}
 
@@ -241,9 +245,9 @@ export class Scanner {
 				this.pt.next = this.NextToken();
 			}
 			this.pt = this.pt.next;
-		} while (this.pt.kind > this.maxT); // skip pragmas
+		} while (this.pt.kind > Scanner.maxT); // skip pragmas
 	
-		return pt;
+		return this.pt;
 	}
 
 	// make sure that peeking starts at the current scan position

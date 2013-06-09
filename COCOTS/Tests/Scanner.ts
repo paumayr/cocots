@@ -104,13 +104,13 @@ export class Scanner {
 	tokens : Token;     // list of tokens already peeked (first token is a dummy)
 	pt : Token;         // current peek token
 	
-	tval : Array = []; // text of current token // TODO use TS 0.9 generics
+	tval = []; // text of current token // TODO use TS 0.9 generics
 	
 	static Scanner() {
 		start = {};
-		for (int i = 65; i <= 90; ++i) start[i] = 1;
-		for (int i = 97; i <= 122; ++i) start[i] = 1;
-		for (int i = 48; i <= 57; ++i) start[i] = 2;
+		for (var i : number = 65; i <= 90; ++i) start[i] = 1;
+		for (var i : number = 97; i <= 122; ++i) start[i] = 1;
+		for (var i : number = 48; i <= 57; ++i) start[i] = 2;
 		start[43] = 3; 
 		start[45] = 4; 
 		start[42] = 5; 
@@ -226,9 +226,9 @@ export class Scanner {
 
 
 	CheckLiteral() {
-		switch (t.val) {
-			case "true": t.kind = 10; break;
-			case "false": t.kind = 11; break;
+		switch (this.t.val) {
+			case "true": this.t.kind = 10; break;
+			case "false": this.t.kind = 11; break;
 			default: break;
 		}
 	}
@@ -237,17 +237,17 @@ export class Scanner {
 		while (this.ch == " " ||
 			this.ch >= "\u0009" && this.ch <= "\u0010" || this.ch == "\u0013"
 		) this.NextCh();
-		if (this.ch == '/' && Comment0() ||this.ch == '/' && Comment1()) return NextToken();
-		var recKind = noSym;
-		var recEnd = pos;
+		if (this.ch == '/' && this.Comment0() ||this.ch == '/' && this.Comment1()) return this.NextToken();
+		var recKind = Scanner.noSym;
+		var recEnd = this.pos;
 		this.t = new Token();
-		this.t.pos = pos;
-		this.t.col = col;
-		this.t.line = line;
-		this.t.charPos = charPos;
-		state : number;
-		if (start.ContainsKey(ch)) {
-			this.state = this.start[ch];
+		this.t.pos = this.pos;
+		this.t.col = this.col;
+		this.t.line = this.line;
+		this.t.charPos = this.charPos;
+		var state : number;
+		if (Scanner.start.ContainsKey(this.ch)) {
+			state = Scanner.start[this.ch];
 		}
 		else
 		{ 
@@ -257,47 +257,51 @@ export class Scanner {
 		this.tval = [];
 		this.AddCh();
 		
+		var done : bool = false;
+		while(!done)
+		{
 		switch (state) {
 			case -1: 
 			{ 
-				this.t.kind = eofSym; 
+				this.t.kind = Scanner.eofSym; 
 				break; 
 			} // NextCh already done
 			case 0:
 			{
-				if (recKind != noSym) {
-					tlen = recEnd - this.t.pos;
+				if (recKind != Scanner.noSym) {
+					this.tval = this.tval.slice(0, recEnd);
 					this.SetScannerBehindT();
 				}
 				this.t.kind = recKind; 
 				break;
 			} // NextCh already done
 			case 1:
-				recEnd = pos; recKind = 1;
-				if (this.ch >= '0' && this.ch <= '9' || this.ch >= 'A' && this.ch <= 'Z' || this.ch >= 'a' && this.ch <= 'z') {AddCh(); goto case 1;}
-				else {t.kind = 1; t.val = new String(tval, 0, tlen); CheckLiteral(); return t;}
+				recEnd = this.pos; recKind = 1;
+				if (this.ch >= '0' && this.ch <= '9' || this.ch >= 'A' && this.ch <= 'Z' || this.ch >= 'a' && this.ch <= 'z') {this.AddCh(); state = 1; done = false; break;}
+				else {this.t.kind = 1; this.t.val = this.tval.join(""); this.CheckLiteral(); return this.t;}
 			case 2:
-				recEnd = pos; recKind = 2;
-				if (this.ch >= '0' && this.ch <= '9') {AddCh(); goto case 2;}
-				else {t.kind = 2; break;}
+				recEnd = this.pos; recKind = 2;
+				if (this.ch >= '0' && this.ch <= '9') {this.AddCh(); state = 2; done = false; break;}
+				else {this.t.kind = 2; break;}
 			case 3:
-				{t.kind = 3; break;}
+				{this.t.kind = 3; break;}
 			case 4:
-				{t.kind = 4; break;}
+				{this.t.kind = 4; break;}
 			case 5:
-				{t.kind = 5; break;}
+				{this.t.kind = 5; break;}
 			case 6:
-				{t.kind = 6; break;}
+				{this.t.kind = 6; break;}
 			case 7:
-				if (this.ch == '=') {AddCh(); goto case 8;}
-				else {goto case 0;}
+				if (this.ch == '=') {this.AddCh(); state = 8; done = false; break;}
+				else {state = 0; done = false; break;}
 			case 8:
-				{t.kind = 7; break;}
+				{this.t.kind = 7; break;}
 			case 9:
-				{t.kind = 8; break;}
+				{this.t.kind = 8; break;}
 			case 10:
-				{t.kind = 9; break;}
+				{this.t.kind = 9; break;}
 
+		}
 		}
 
 		this.t.val = this.tval.join();
@@ -307,19 +311,19 @@ export class Scanner {
 	private SetScannerBehindT() {
 		this.buffer.Pos = this.t.pos;
 		this.NextCh();
-		this.line = t.line; 
-		this.col = t.col; 
-		this.charPos = t.charPos;
-		for (i : number = 0; i < this.tval.length; i++) NextCh();
+		this.line = this.t.line; 
+		this.col = this.t.col; 
+		this.charPos = this.t.charPos;
+		for (var i : number = 0; i < this.tval.length; i++) this.NextCh();
 	}
 	
 	// get the next token (possibly a token already seen during peeking)
 	public Scan () : Token {
-		if (tokens.next == null) {
-			return NextToken();
+		if (this.tokens.next == null) {
+			return this.NextToken();
 		} else {
-			pt = tokens = tokens.next;
-			return tokens;
+			this.pt = this.tokens = this.tokens.next;
+			return this.tokens;
 		}
 	}
 
@@ -330,9 +334,9 @@ export class Scanner {
 				this.pt.next = this.NextToken();
 			}
 			this.pt = this.pt.next;
-		} while (this.pt.kind > this.maxT); // skip pragmas
+		} while (this.pt.kind > Scanner.maxT); // skip pragmas
 	
-		return pt;
+		return this.pt;
 	}
 
 	// make sure that peeking starts at the current scan position
