@@ -1,4 +1,4 @@
-/// <reference path="Scripts/typings/qunit/qunit.d.ts" />
+/// <reference path="../Scripts/typings/qunit/qunit.d.ts" />
 /// <chutzpah_reference path="Parser.ts" />
 /// <chutzpah_reference path="Scanner.ts" />
 /// <reference path="Parser.ts" />

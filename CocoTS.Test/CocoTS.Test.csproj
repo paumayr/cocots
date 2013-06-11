@@ -26,31 +26,31 @@
     <Content Include="app.js">
       <DependentUpon>app.ts</DependentUpon>
     </Content>
-    <Content Include="Parser.min.js">
+    <Content Include="TestATG\Parser.min.js">
       <DependentUpon>Parser.ts</DependentUpon>
     </Content>
-    <Content Include="tests.min.js">
+    <Content Include="TestATG\tests.min.js">
       <DependentUpon>tests.ts</DependentUpon>
     </Content>
-    <TypeScriptCompile Include="Parser.ts" />
-    <Content Include="Parser.js">
+    <TypeScriptCompile Include="TestATG\Parser.ts" />
+    <Content Include="TestATG\Parser.js">
       <DependentUpon>Parser.ts</DependentUpon>
     </Content>
     <Content Include="qunit.css" />
     <Content Include="qunit.js" />
-    <TypeScriptCompile Include="Scanner.ts" />
-    <Content Include="Scanner.js">
+    <TypeScriptCompile Include="TestATG\Scanner.ts" />
+    <Content Include="TestATG\Scanner.js">
       <DependentUpon>Scanner.ts</DependentUpon>
     </Content>
-    <Content Include="Scanner.min.js">
+    <Content Include="TestATG\Scanner.min.js">
       <DependentUpon>Scanner.ts</DependentUpon>
     </Content>
     <Content Include="Scripts\r.js" />
     <Content Include="Scripts\require.js" />
     <Content Include="Scripts\typings\qunit\qunit.d.ts" />
     <Content Include="test.html" />
-    <TypeScriptCompile Include="tests.ts" />
-    <Content Include="tests.js">
+    <TypeScriptCompile Include="TestATG\tests.ts" />
+    <Content Include="TestATG\tests.js">
       <DependentUpon>tests.ts</DependentUpon>
     </Content>
   </ItemGroup>
@@ -61,28 +61,28 @@
     <Content Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="test.atg" />
+    <Content Include="TestATG\test.atg" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Chutzpah.json" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Scanner.js.map">
+    <Content Include="TestATG\Scanner.js.map">
       <DependentUpon>Scanner.ts</DependentUpon>
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="tests.js.map">
+    <Content Include="TestATG\tests.js.map">
       <DependentUpon>tests.ts</DependentUpon>
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Parser.js.map">
+    <Content Include="TestATG\Parser.js.map">
       <DependentUpon>Parser.ts</DependentUpon>
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Scanner.min.js.map">
+    <Content Include="TestATG\Scanner.min.js.map">
       <DependentUpon>Scanner.js</DependentUpon>
     </Content>
   </ItemGroup>
