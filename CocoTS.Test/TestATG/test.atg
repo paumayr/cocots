@@ -1,5 +1,7 @@
 ﻿COMPILER Test
 
+	public result : any;
+
 CHARACTERS
 	letter = 'A'..'Z' + 'a'..'z'.
 	digit = '0'..'9'.
@@ -22,15 +24,54 @@ IGNORE '\r' + '\n' + '\t'
 
 PRODUCTIONS
 
-AddOp = (plus|minus).
-MulOp = (mult | div).
-RelOp = ( equals | lesser | greater ).
-Expr = SimExpr [ RelOp SimExpr ].
-Factor = (Ident | number | '-' Factor | "true" | "false").
-Ident = ident.
+AddOp<op : string;> =
+	(					
+		plus			(. ret = { op : "plus" }; .)
+		|
+		minus			(. ret = { op : "minus" }; .)
+	).
 
-SimExpr = Term { AddOp Term }.
-Term = Factor { MulOp Factor }.
-Test = Expr.
+MulOp<op : string;> = 
+	(					
+		mult			(. ret = { op : "mult" }; .)
+		| 
+		div				(. ret = { op : "div" }; .)
+	).
+
+RelOp<op : string;> = 
+	(
+		equals			(. ret = { op : "equals" }; .)
+		| lesser		(. ret = { op : "lesser" }; .)
+		| greater		(. ret = { op : "greater" }; .)
+	).
+
+Expr<expr : any;> = SimExpr<left>	(. ret = left; .)
+			[ RelOp<op> 
+				SimExpr<right>		(. ret = { expr : { left : ret.expr, right : right.expr } };.)
+			].
+Factor<expr : any;> = (
+			Ident<value>			(. ret = { expr : { type: "ident", ident : value.ident } }; .)
+		| number					(. ret = { expr : { type: "number", number : parseFloat(this.t.val) } }; .)
+		| '-' Factor<factor>		(. ret = { expr : { type: "negation", operand : factor.expr } }; .)
+		| "true"					(. ret = { expr : { type: "boolean", value : true } }; .)
+		| "false"					(. ret = { expr : { type: "boolean", value : false } }; .)
+		).
+
+Ident<ident : string;> = ident		(. ret = { ident : this.t.val }; .).
+
+SimExpr<expr : any;> = 
+		Term<left>					(. ret = left; .)
+		{ 
+			AddOp<op> 
+			Term<right>				(. ret = { expr : { type : op.op, left : ret.expr, right : right.expr } }; .)
+		}.
+
+Term<expr : any;> = Factor<left>	(. ret = left; .) 
+		{
+			MulOp<op>
+			Factor<right>			(. ret = { expr : { type: op.op, left : ret.expr, right : right.expr } }; .)
+		}.
+
+Test = Expr<test>					(. this.result = test.expr; .).
 
 END Test.

@@ -171,8 +171,10 @@ public class ParserGen {
 			switch (p.typ) {
 				case Node.nt: {
 					Indent(indent);
-					gen.Write("this." + p.sym.name + "(");
+					gen.Write("var ");
 					CopySourcePart(p.pos, 0);
+					gen.Write(" = ");
+					gen.Write("this." + p.sym.name + "(");
 					gen.WriteLine(");");
 					break;
 				}
@@ -319,12 +321,20 @@ public class ParserGen {
 	void GenProductions() {
 		foreach (Symbol sym in tab.nonterminals) {
 			curSy = sym;
-			gen.Write("\t{0}(", sym.name);
+			gen.Write("\t{0}() ", sym.name);
+			gen.Write(" : {");
 			CopySourcePart(sym.attrPos, 0);
-			gen.WriteLine(") {");
+			gen.WriteLine(" } ");
+			Indent(1);
+			gen.WriteLine(" { ");
+			Indent(2);
+			gen.Write("var ret : { ");
+			CopySourcePart(sym.attrPos, 0);
+			gen.WriteLine("};");
 			CopySourcePart(sym.semPos, 2);
 			GenCode(sym.graph, 2, new BitArray(tab.terminals.Count));
-			gen.WriteLine("\t}"); gen.WriteLine();
+			gen.WriteLine("\t\treturn ret;");
+			gen.WriteLine("\t}"); 
 		}
 	}
 

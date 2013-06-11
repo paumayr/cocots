@@ -29,8 +29,8 @@
     <Content Include="TestATG\Parser.min.js">
       <DependentUpon>Parser.ts</DependentUpon>
     </Content>
-    <Content Include="TestATG\tests.min.js">
-      <DependentUpon>tests.ts</DependentUpon>
+    <Content Include="TestATG\testsScanner.min.js">
+      <DependentUpon>testsScanner.ts</DependentUpon>
     </Content>
     <TypeScriptCompile Include="TestATG\Parser.ts" />
     <Content Include="TestATG\Parser.js">
@@ -49,9 +49,16 @@
     <Content Include="Scripts\require.js" />
     <Content Include="Scripts\typings\qunit\qunit.d.ts" />
     <Content Include="test.html" />
-    <TypeScriptCompile Include="TestATG\tests.ts" />
-    <Content Include="TestATG\tests.js">
-      <DependentUpon>tests.ts</DependentUpon>
+    <TypeScriptCompile Include="TestATG\testsScanner.ts" />
+    <TypeScriptCompile Include="TestATG\testsParser.ts" />
+    <Content Include="TestATG\testsParser.js">
+      <DependentUpon>testsParser.ts</DependentUpon>
+    </Content>
+    <Content Include="TestATG\testsParser.min.js">
+      <DependentUpon>testsParser.ts</DependentUpon>
+    </Content>
+    <Content Include="TestATG\testsScanner.js">
+      <DependentUpon>testsScanner.ts</DependentUpon>
     </Content>
   </ItemGroup>
   <ItemGroup>
@@ -72,8 +79,8 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="TestATG\tests.js.map">
-      <DependentUpon>tests.ts</DependentUpon>
+    <Content Include="TestATG\testsScanner.js.map">
+      <DependentUpon>testsScanner.ts</DependentUpon>
     </Content>
   </ItemGroup>
   <ItemGroup>
@@ -84,6 +91,11 @@
   <ItemGroup>
     <Content Include="TestATG\Scanner.min.js.map">
       <DependentUpon>Scanner.js</DependentUpon>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="TestATG\testsParser.js.map">
+      <DependentUpon>testsParser.ts</DependentUpon>
     </Content>
   </ItemGroup>
   <PropertyGroup>

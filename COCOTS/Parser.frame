@@ -45,7 +45,7 @@ export class Parser {
 
 -->declarations
 
-	public Parser(scanner : Scanner) 
+	constructor(scanner : Scanner) 
 	{
 		this.scanner = scanner;
 		this.errors = new Errors();

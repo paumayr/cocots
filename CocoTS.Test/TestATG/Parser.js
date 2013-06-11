@@ -28,9 +28,11 @@ var testlanguage;
 (function (testlanguage) {
     /// <reference path="Scanner.ts" />
     var Parser = (function () {
-        function Parser() {
+        function Parser(scanner) {
             // lookahead token
             this.errDist = Parser.minErrDist;
+            this.scanner = scanner;
+            this.errors = new Errors();
         }
         Parser._EOF = 0;
         Parser._ident = 1;
@@ -46,10 +48,6 @@ var testlanguage;
         Parser.T = true;
         Parser.x = false;
         Parser.minErrDist = 2;
-        Parser.prototype.Parser = function (scanner) {
-            this.scanner = scanner;
-            this.errors = new Errors();
-        };
         Parser.prototype.SynErr = function (n) {
             if(this.errDist >= Parser.minErrDist) {
                 this.errors.SynErrPositioned(this.la.line, this.la.col, n);
@@ -110,76 +108,172 @@ var testlanguage;
             }
         };
         Parser.prototype.AddOp = function () {
+            var ret;
             if(this.la.kind == 3) {
                 this.Get();
+                ret = {
+                    op: "plus"
+                };
             } else if(this.la.kind == 4) {
                 this.Get();
+                ret = {
+                    op: "minus"
+                };
             } else {
                 this.SynErr(13);
             }
+            return ret;
         };
         Parser.prototype.MulOp = function () {
+            var ret;
             if(this.la.kind == 5) {
                 this.Get();
+                ret = {
+                    op: "mult"
+                };
             } else if(this.la.kind == 6) {
                 this.Get();
+                ret = {
+                    op: "div"
+                };
             } else {
                 this.SynErr(14);
             }
+            return ret;
         };
         Parser.prototype.RelOp = function () {
+            var ret;
             if(this.la.kind == 9) {
                 this.Get();
+                ret = {
+                    op: "equals"
+                };
             } else if(this.la.kind == 7) {
                 this.Get();
+                ret = {
+                    op: "lesser"
+                };
             } else if(this.la.kind == 8) {
                 this.Get();
+                ret = {
+                    op: "greater"
+                };
             } else {
                 this.SynErr(15);
             }
+            return ret;
         };
         Parser.prototype.Expr = function () {
-            this.SimExpr();
+            var ret;
+            var left = this.SimExpr();
+            ret = left;
             if(this.la.kind == 7 || this.la.kind == 8 || this.la.kind == 9) {
-                this.RelOp();
-                this.SimExpr();
+                var op = this.RelOp();
+                var right = this.SimExpr();
+                ret = {
+                    expr: {
+                        left: ret.expr,
+                        right: right.expr
+                    }
+                };
             }
+            return ret;
         };
         Parser.prototype.SimExpr = function () {
-            this.Term();
+            var ret;
+            var left = this.Term();
+            ret = left;
             while(this.la.kind == 3 || this.la.kind == 4) {
-                this.AddOp();
-                this.Term();
+                var op = this.AddOp();
+                var right = this.Term();
+                ret = {
+                    expr: {
+                        type: op.op,
+                        left: ret.expr,
+                        right: right.expr
+                    }
+                };
             }
+            return ret;
         };
         Parser.prototype.Factor = function () {
+            var ret;
             if(this.la.kind == 1) {
-                this.Ident();
+                var value = this.Ident();
+                ret = {
+                    expr: {
+                        type: "ident",
+                        ident: value.ident
+                    }
+                };
             } else if(this.la.kind == 2) {
                 this.Get();
+                ret = {
+                    expr: {
+                        type: "number",
+                        number: parseFloat(this.t.val)
+                    }
+                };
             } else if(this.la.kind == 4) {
                 this.Get();
-                this.Factor();
+                var factor = this.Factor();
+                ret = {
+                    expr: {
+                        type: "negation",
+                        operand: factor.expr
+                    }
+                };
             } else if(this.la.kind == 10) {
                 this.Get();
+                ret = {
+                    expr: {
+                        type: "boolean",
+                        value: true
+                    }
+                };
             } else if(this.la.kind == 11) {
                 this.Get();
+                ret = {
+                    expr: {
+                        type: "boolean",
+                        value: false
+                    }
+                };
             } else {
                 this.SynErr(16);
             }
+            return ret;
         };
         Parser.prototype.Ident = function () {
+            var ret;
             this.Expect(1);
+            ret = {
+                ident: this.t.val
+            };
+            return ret;
         };
         Parser.prototype.Term = function () {
-            this.Factor();
+            var ret;
+            var left = this.Factor();
+            ret = left;
             while(this.la.kind == 5 || this.la.kind == 6) {
-                this.MulOp();
-                this.Factor();
+                var op = this.MulOp();
+                var right = this.Factor();
+                ret = {
+                    expr: {
+                        type: op.op,
+                        left: ret.expr,
+                        right: right.expr
+                    }
+                };
             }
+            return ret;
         };
         Parser.prototype.Test = function () {
-            this.Expr();
+            var ret;
+            var test = this.Expr();
+            this.result = test.expr;
+            return ret;
         };
         Parser.prototype.Parse = function () {
             this.la = new testlanguage.Token();

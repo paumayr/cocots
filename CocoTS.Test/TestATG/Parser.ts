@@ -56,9 +56,11 @@ export class Parser {
 	public la : Token;   // lookahead token
 	public errDist = Parser.minErrDist;
 
+public result : any;
 
 
-	public Parser(scanner : Scanner) 
+
+	constructor(scanner : Scanner) 
 	{
 		this.scanner = scanner;
 		this.errors = new Errors();
@@ -139,79 +141,117 @@ export class Parser {
 	}
 
 	
-	AddOp() {
+	AddOp()  : {op : string; } 
+	 { 
+		var ret : { op : string;};
 		if (this.la.kind == 3) {
 			this.Get();
+			ret = { op : "plus" }; 
 		} else if (this.la.kind == 4) {
 			this.Get();
+			ret = { op : "minus" }; 
 		} else this.SynErr(13);
+		return ret;
 	}
-
-	MulOp() {
+	MulOp()  : {op : string; } 
+	 { 
+		var ret : { op : string;};
 		if (this.la.kind == 5) {
 			this.Get();
+			ret = { op : "mult" }; 
 		} else if (this.la.kind == 6) {
 			this.Get();
+			ret = { op : "div" }; 
 		} else this.SynErr(14);
+		return ret;
 	}
-
-	RelOp() {
+	RelOp()  : {op : string; } 
+	 { 
+		var ret : { op : string;};
 		if (this.la.kind == 9) {
 			this.Get();
+			ret = { op : "equals" }; 
 		} else if (this.la.kind == 7) {
 			this.Get();
+			ret = { op : "lesser" }; 
 		} else if (this.la.kind == 8) {
 			this.Get();
+			ret = { op : "greater" }; 
 		} else this.SynErr(15);
+		return ret;
 	}
-
-	Expr() {
-		this.SimExpr();
+	Expr()  : {expr : any; } 
+	 { 
+		var ret : { expr : any;};
+		var left = this.SimExpr();
+		ret = left; 
 		if (this.la.kind == 7 || this.la.kind == 8 || this.la.kind == 9) {
-			this.RelOp();
-			this.SimExpr();
+			var op = this.RelOp();
+			var right = this.SimExpr();
+			ret = { expr : { left : ret.expr, right : right.expr } };
 		}
+		return ret;
 	}
-
-	SimExpr() {
-		this.Term();
+	SimExpr()  : {expr : any; } 
+	 { 
+		var ret : { expr : any;};
+		var left = this.Term();
+		ret = left; 
 		while (this.la.kind == 3 || this.la.kind == 4) {
-			this.AddOp();
-			this.Term();
+			var op = this.AddOp();
+			var right = this.Term();
+			ret = { expr : { type : op.op, left : ret.expr, right : right.expr } }; 
 		}
+		return ret;
 	}
-
-	Factor() {
+	Factor()  : {expr : any; } 
+	 { 
+		var ret : { expr : any;};
 		if (this.la.kind == 1) {
-			this.Ident();
+			var value = this.Ident();
+			ret = { expr : { type: "ident", ident : value.ident } }; 
 		} else if (this.la.kind == 2) {
 			this.Get();
+			ret = { expr : { type: "number", number : parseFloat(this.t.val) } }; 
 		} else if (this.la.kind == 4) {
 			this.Get();
-			this.Factor();
+			var factor = this.Factor();
+			ret = { expr : { type: "negation", operand : factor.expr } }; 
 		} else if (this.la.kind == 10) {
 			this.Get();
+			ret = { expr : { type: "boolean", value : true } }; 
 		} else if (this.la.kind == 11) {
 			this.Get();
+			ret = { expr : { type: "boolean", value : false } }; 
 		} else this.SynErr(16);
+		return ret;
 	}
-
-	Ident() {
+	Ident()  : {ident : string; } 
+	 { 
+		var ret : { ident : string;};
 		this.Expect(1);
+		ret = { ident : this.t.val }; 
+		return ret;
 	}
-
-	Term() {
-		this.Factor();
+	Term()  : {expr : any; } 
+	 { 
+		var ret : { expr : any;};
+		var left = this.Factor();
+		ret = left; 
 		while (this.la.kind == 5 || this.la.kind == 6) {
-			this.MulOp();
-			this.Factor();
+			var op = this.MulOp();
+			var right = this.Factor();
+			ret = { expr : { type: op.op, left : ret.expr, right : right.expr } }; 
 		}
+		return ret;
 	}
-
-	Test() {
-		this.Expr();
+	Test()  : { } 
+	 { 
+		var ret : { };
+		var test = this.Expr();
+		this.result = test.expr; 
+		return ret;
 	}
-
 
 
 	public Parse() {
