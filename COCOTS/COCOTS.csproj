@@ -62,6 +62,20 @@
     <Content Include="DFA.js">
       <DependentUpon>DFA.ts</DependentUpon>
     </Content>
+    <Content Include="ParserGen.js">
+      <DependentUpon>ParserGen.ts</DependentUpon>
+    </Content>
+    <Content Include="ParserGen.min.js">
+      <DependentUpon>ParserGen.ts</DependentUpon>
+    </Content>
+    <Content Include="Tab.js">
+      <DependentUpon>Tab.ts</DependentUpon>
+    </Content>
+    <Content Include="Tab.min.js">
+      <DependentUpon>Tab.ts</DependentUpon>
+    </Content>
+    <TypeScriptCompile Include="Tab.ts" />
+    <TypeScriptCompile Include="ParserGen.ts" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
