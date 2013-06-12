@@ -103,190 +103,205 @@ export class Node {
 	public static get opt(): number { return  13; } // option: [ ]
 	public static get rslv(): number { return 14; } // resolver expr
 
-	public const int normalTrans  = 0;		// transition codes
-	public const int contextTrans = 1;
+	public static get normalTrans(): number { return 0; }	// transition codes
+	public static get contextTrans(): number { return 1; }
 
-	public int      n;			// node number
-	public int      typ;		// t, nt, wt, chr, clas, any, eps, sem, sync, alt, iter, opt, rslv
-	public Node     next;		// to successor node
-	public Node     down;		// alt: to next alternative
-	public Node     sub;		// alt, iter, opt: to first node of substructure
-	public bool     up;			// true: "next" leads to successor in enclosing structure
-	public Symbol   sym;		// nt, t, wt: symbol represented by this node
-	public int      val;		// chr:  ordinal character value
+	public n : number;			// node number
+	public typ : number;		// t, nt, wt, chr, clas, any, eps, sem, sync, alt, iter, opt, rslv
+	public next: Node;		// to successor node
+	public down: Node;		// alt: to next alternative
+	public sub: Node;		// alt, iter, opt: to first node of substructure
+	public up : bool;			// true: "next" leads to successor in enclosing structure
+	public sym: Symbol;		// nt, t, wt: symbol represented by this node
+	public val : number;		// chr:  ordinal character value
 // clas: index of character class
-	public int      code;		// chr, clas: transition code
-	public BitArray set;		// any, sync: the set represented by this node
-	public Position pos;		// nt, t, wt: pos of actual attributes
+	public code : number;		// chr, clas: transition code
+	public set: BitArray;		// any, sync: the set represented by this node
+	public pos: Position;		// nt, t, wt: pos of actual attributes
 // sem:       pos of semantic action in source text
 // rslv:       pos of resolver in source text
-	public int      line;		// source text line number of item in this node
-	public State    state;	// DFA state corresponding to this node
+	public line : number;		// source text line number of item in this node
+	public state: State;	// DFA state corresponding to this node
 // (only used in DFA.ConvertToStates)
 
-	public Node(int typ, Symbol sym, int line) {
-		this.typ = typ; this.sym = sym; this.line = line;
-}
+	constructor(typ: number, sym: Symbol, line : number) {
+		this.typ = typ;
+		this.sym = sym;
+		this.line = line;
+	}
 }
 
 //=====================================================================
 // Graph 
 //=====================================================================
 
-public class Graph {
-	public Node l;	// left end of graph = head
-	public Node r;	// right end of graph = list of nodes to be linked to successor graph
+export class Graph {
+	public l : Node;	// left end of graph = head
+	public r : Node;	// right end of graph = list of nodes to be linked to successor graph
 
-	public Graph() {
-		l = null; r = null;
-}
-
-	public Graph(Node left, Node right) {
+/*	constructor() {
+		l = null;
+		r = null;
+	}
+	*/
+	constructor(left: Node, right: Node) {
 		l = left; r = right;
-}
+	}
 
-	public Graph(Node p) {
+/*	constructor(p: Node) {
 		l = p; r = p;
-}
+	}*/
 }
 
 //=====================================================================
 // Sets 
 //=====================================================================
 
-public class Sets {
+export class Sets {
 
-	public static int Elements(BitArray s) {
-		int max = s.Count;
-		int n = 0;
-		for (int i=0; i<max; i++)
+	public static Elements(s: BitArray) : number {
+		var max = s.Count;
+		var n = 0;
+		for (var i=0; i<max; i++)
 			if (s[i]) n++;
 		return n;
-}
+	}
 
-	public static bool Equals(BitArray a, BitArray b) {
-		int max = a.Count;
-		for (int i=0; i<max; i++)
-			if (a[i]!= b[i]) return false;
+	public static Equals(a: BitArray, b: BitArray): bool {
+		var max = a.Count;
+		for (var i = 0; i<max; i++)
+			if (a[i] != b[i])
+				return false;
 		return true;
-}
+	}
 
-	public static bool Intersect(BitArray a, BitArray b) { // a * b != {}
-		int max = a.Count;
-		for (int i=0; i<max; i++)
-			if (a[i]&& b[i]) return true;
+	public static Intersect(a: BitArray, b: BitArray): bool  { // a * b != {}
+		var max = a.Count;
+		for (var i=0; i<max; i++)
+			if (a[i] && b[i]) return true;
 		return false;
-}
+	}
 
-	public static void Subtract(BitArray a, BitArray b) { // a = a - b
-		BitArray c = (BitArray) b.Clone();
+	public static Subtract(a: BitArray, b: BitArray) { // a = a - b
+		var c = b.Clone();
 		a.And(c.Not());
-}
-
+	}
 }
 
 //=====================================================================
 // CharClass
 //=====================================================================
 
-public class CharClass {
-	public int n;       	// class number
-	public string name;		// class name
-	public CharSet set;	// set representing the class
+export class CharClass {
+	public n : number;       	// class number
+	public name: string;		// class name
+	public set: CharSet;	// set representing the class
 
-	public CharClass(string name, CharSet s) {
-		this.name = name; this.set = s;
-}
+	constructor(name: string, s: CharSet) {
+		this.name = name;
+		this.set = s;
+	}
 }
 
 
 //=====================================================================
 // Tab
 //=====================================================================
+export class Tab {
+	public semDeclPos: Position;       // position of global semantic declarations
+	public ignored: CharSet;           // characters ignored by the scanner
+	public ddt: bool[] = new Array(10); // debug and test switches
+	public gramSy : Symbol;            // root nonterminal; filled by ATG
+	public eofSy: Symbol;              // end of file symbol
+	public noSym: Symbol;              // used in case of an error
+	public allSyncSets: BitArray;      // union of all synchronisation sets
+	public literals: Hashtable;        // symbols that are used as literals
 
-public class Tab {
-	public Position semDeclPos;       // position of global semantic declarations
-	public CharSet ignored;           // characters ignored by the scanner
-	public bool[]ddt = new bool[10]; // debug and test switches
-	public Symbol gramSy;             // root nonterminal; filled by ATG
-	public Symbol eofSy;              // end of file symbol
-	public Symbol noSym;              // used in case of an error
-	public BitArray allSyncSets;      // union of all synchronisation sets
-	public Hashtable literals;        // symbols that are used as literals
-
-	public string srcName;            // name of the atg file (including path)
-	public string srcDir;             // directory path of the atg file
-	public string nsName;             // namespace for generated files
-	public string frameDir;           // directory containing the frame files
-	public string outDir;             // directory for generated files
-	public bool checkEOF = true;      // should coco generate a check for EOF at
+	public srcName: string;            // name of the atg file (including path)
+	public srcDir: string;             // directory path of the atg file
+	public nsName: string;             // namespace for generated files
+	public frameDir: string;           // directory containing the frame files
+	public outDir: string;             // directory for generated files
+	public checkEOF: bool = true;      // should coco generate a check for EOF at
 //   the end of Parser.Parse():
-	public bool emitLines;            // emit #line pragmas for semantic actions
+	public emitLines: bool;            // emit #line pragmas for semantic actions
 //   in the generated parser
 
-	BitArray visited;                 // mark list for graph traversals
-	Symbol curSy;                     // current symbol in computation of sets
+	visited: BitArray;                 // mark list for graph traversals
+	curSy: Symbol;                     // current symbol in computation of sets
 
-	Parser parser;                    // other Coco objects
-	TextWriter trace;
-	Errors errors;
+	parser: Parser;                    // other Coco objects
+	trace: TextWriter;
+	errors: Errors;
 
-	public Tab(Parser parser) {
+	constructor(parser: Parser) {
 		this.parser = parser;
 		trace = parser.trace;
 		errors = parser.errors;
 		eofSy = NewSym(Node.t, "EOF", 0);
 		dummyNode = NewNode(Node.eps, null, 0);
 		literals = new Hashtable();
-}
+	}
 
 //---------------------------------------------------------------------
 //  Symbol list management
 //---------------------------------------------------------------------
 
-	public ArrayList terminals = new ArrayList();
-	public ArrayList pragmas = new ArrayList();
-	public ArrayList nonterminals = new ArrayList();
+	public terminals: ArrayList = new ArrayList();
+	public pragmas: ArrayList = new ArrayList();
+	public nonterminals: ArrayList = new ArrayList();
 
-	string[]tKind = {"fixedToken", "classToken", "litToken", "classLitToken"};
+	tKind: string[]= ["fixedToken", "classToken", "litToken", "classLitToken"];
 
-	public Symbol NewSym(int typ, string name, int line) {
+	public NewSym(typ: number, name: string, line: number): Symbol {
 		if (name.Length == 2 && name[0]== '"') {
 			parser.SemErr("empty token not allowed"); name = "???";
-}
-		Symbol sym = new Symbol(typ, name, line);
+		}
+
+		var sym= new Symbol(typ, name, line);
 		switch (typ) {
 			case Node.t: sym.n = terminals.Count; terminals.Add(sym); break;
 			case Node.pr: pragmas.Add(sym); break;
 			case Node.nt: sym.n = nonterminals.Count; nonterminals.Add(sym); break;
-}
+		}
 		return sym;
-}
+	}
 
-	public Symbol FindSym(string name) {
+	public FindSym(name: string): Symbol  {
 		foreach (Symbol s in terminals)
 			if (s.name == name) return s;
 		foreach (Symbol s in nonterminals)
 			if (s.name == name) return s;
 		return null;
-}
+	}
 
-	int Num(Node p) {
+	Num(p: Node) : number{
 		if (p == null) return 0; else return p.n;
-}
+	}
 
-	void PrintSym(Symbol sym) {
+	PrintSym(sym: Symbol) {
 		trace.Write("{0,3} {1,-14} {2}", sym.n, Name(sym.name), nTyp[sym.typ]);
-		if (sym.attrPos==null) trace.Write(" false "); else trace.Write(" true  ");
+		if (sym.attrPos == null) {
+			trace.Write(" false ");
+		} else {
+			trace.Write(" true  ");
+		}
+
 		if (sym.typ == Node.nt) {
 			trace.Write("{0,5}", Num(sym.graph));
-			if (sym.deletable) trace.Write(" true  "); else trace.Write(" false ");
-} else
+			if (sym.deletable) {
+				trace.Write(" true  ");
+			} else {
+				trace.Write(" false ");
+			}
+		} else {
 			trace.Write("            ");
-		trace.WriteLine("{0,5} {1}", sym.line, tKind[sym.tokenKind]);
-}
+		}
 
-	public void PrintSymbolTable() {
+		trace.WriteLine("{0,5} {1}", sym.line, tKind[sym.tokenKind]);
+	}
+
+	public PrintSymbolTable() {
 		trace.WriteLine("Symbol Table:");
 		trace.WriteLine("------------"); trace.WriteLine();
 		trace.WriteLine(" nr name          typ  hasAt graph  del    line tokenKind");
@@ -298,12 +313,13 @@ public class Tab {
 		trace.WriteLine("--------------");
 		foreach (DictionaryEntry e in literals) {
 			trace.WriteLine("_" +((Symbol) e.Value).name + " = " +e.Key + ".");
-}
+		}
 		trace.WriteLine();
-}
+	}
 
-	public void PrintSet(BitArray s, int indent) {
-		int col, len;
+	public PrintSet(s: BitArray, indent : number) {
+		var col: number;
+		var len : number;
 		col = indent;
 		foreach (Symbol sym in terminals) {
 			if (s[sym.n]) {
@@ -311,168 +327,187 @@ public class Tab {
 				if (col +len >= 80) {
 					trace.WriteLine();
 					for (col = 1; col < indent; col++) trace.Write(" ");
-}
+				}
+
 				trace.Write("{0} ", sym.name);
 				col += len +1;
-}
-}
-		if (col == indent) trace.Write("-- empty set --");
+			}
+		}
+
+		if (col == indent) {
+			trace.Write("-- empty set --");
+		}
 		trace.WriteLine();
-}
+	}
 
 //---------------------------------------------------------------------
 //  Syntax graph management
 //---------------------------------------------------------------------
 
-	public ArrayList nodes = new ArrayList();
-	public string[]nTyp =
-{"    ", "t   ", "pr  ", "nt  ", "clas", "chr ", "wt  ", "any ", "eps ",
-		 "sync", "sem ", "alt ", "iter", "opt ", "rslv"};
-	Node dummyNode;
+	public nodes = new ArrayList();
+	public nTyp: string[] =
+		["    ", "t   ", "pr  ", "nt  ", "clas", "chr ", "wt  ", "any ", "eps ",
+		 "sync", "sem ", "alt ", "iter", "opt ", "rslv"];
+	dummyNode: Node;
 
-	public Node NewNode(int typ, Symbol sym, int line) {
-		Node node = new Node(typ, sym, line);
+	public NewNode(typ: number, sym: Symbol, line : number): Node  {
+		var node = new Node(typ, sym, line);
 		node.n = nodes.Count;
 		nodes.Add(node);
 		return node;
-}
+	}
 
-	public Node NewNode(int typ, Node sub) {
-		Node node = NewNode(typ, null, 0);
+	public NewNode(typ: number, sub: Node): Node  {
+		var node = NewNode(typ, null, 0);
 		node.sub = sub;
 		return node;
-}
+	}
 
-	public Node NewNode(int typ, int val, int line) {
-		Node node = NewNode(typ, null, line);
+
+	public NewNode(typ : number, val : number, line : number): Node {
+		var node = NewNode(typ, null, line);
 		node.val = val;
 		return node;
-}
+	}
 
-	public void MakeFirstAlt(Graph g) {
-		g.l = NewNode(Node.alt, g.l); g.l.line = g.l.sub.line;
+	public MakeFirstAlt(g: Graph) {
+		g.l = NewNode(Node.alt, g.l);
+		g.l.line = g.l.sub.line;
 		g.r.up = true;
 		g.l.next = g.r;
 		g.r = g.l;
-}
+	}
 
 // The result will be in g1
-	public void MakeAlternative(Graph g1, Graph g2) {
-		g2.l = NewNode(Node.alt, g2.l); g2.l.line = g2.l.sub.line;
+	public MakeAlternative(g1: Graph, g2: Graph) {
+		g2.l = NewNode(Node.alt, g2.l);
+		g2.l.line = g2.l.sub.line;
 		g2.l.up = true;
 		g2.r.up = true;
-		Node p = g1.l; while (p.down != null) p = p.down;
+		var p = g1.l; while (p.down != null) p = p.down;
 		p.down = g2.l;
 		p = g1.r; while (p.next != null) p = p.next;
 // append alternative to g1 end list
 		p.next = g2.l;
 // append g2 end list to g1 end list
 		g2.l.next = g2.r;
-}
+	}
 
 // The result will be in g1
-	public void MakeSequence(Graph g1, Graph g2) {
-		Node p = g1.r.next; g1.r.next = g2.l; // link head node
+	public MakeSequence(g1: Graph, g2: Graph) {
+		var p = g1.r.next;
+		g1.r.next = g2.l; // link head node
 		while (p != null) {  // link substructure
-			Node q = p.next; p.next = g2.l;
+			var q = p.next; p.next = g2.l;
 			p = q;
-}
+		}
 		g1.r = g2.r;
-}
+	}
 
-	public void MakeIteration(Graph g) {
+	public MakeIteration(g: Graph) {
 		g.l = NewNode(Node.iter, g.l);
 		g.r.up = true;
-		Node p = g.r;
+		var p = g.r;
 		g.r = g.l;
 		while (p != null) {
-			Node q = p.next; p.next = g.l;
+			var q = p.next; p.next = g.l;
 			p = q;
-}
-}
+		}
+	}
 
-	public void MakeOption(Graph g) {
+	public MakeOption(g: Graph) {
 		g.l = NewNode(Node.opt, g.l);
 		g.r.up = true;
 		g.l.next = g.r;
 		g.r = g.l;
-}
+	}
 
-	public void Finish(Graph g) {
-		Node p = g.r;
+	public Finish(g: Graph) {
+		var p = g.r;
 		while (p != null) {
 			Node q = p.next; p.next = null;
 			p = q;
-}
-}
+		}
+	}
 
-	public void DeleteNodes() {
+	public DeleteNodes() {
 		nodes = new ArrayList();
 		dummyNode = NewNode(Node.eps, null, 0);
-}
+	}
 
-	public Graph StrToGraph(string str) {
-		string s = Unescape(str.Substring(1, str.Length-2));
+	public StrToGraph(str: string): Graph  {
+		var s = Unescape(str.Substring(1, str.Length-2));
 		if (s.Length == 0) parser.SemErr("empty token not allowed");
-		Graph g = new Graph();
+		var g = new Graph();
 		g.r = dummyNode;
-		for (int i = 0; i < s.Length; i++) {
-			Node p = NewNode(Node.chr, (int) s[i], 0);
+		for (var i = 0; i < s.Length; i++) {
+			var p = NewNode(Node.chr, s[i], 0);
 			g.r.next = p; g.r = p;
-}
+		}
+
 		g.l = dummyNode.next; dummyNode.next = null;
 		return g;
-}
+	}
 
-  public void SetContextTrans(Node p) { // set transition code in the graph rooted at p
-    while (p != null) {
-      if (p.typ == Node.chr || p.typ == Node.clas) {
-        p.code = Node.contextTrans;
-} else if (p.typ == Node.opt || p.typ == Node.iter) {
-        SetContextTrans(p.sub);
-} else if (p.typ == Node.alt) {
-        SetContextTrans(p.sub); SetContextTrans(p.down);
-}
-      if (p.up) break;
-      p = p.next;
-}
-}
+	public SetContextTrans(p: Node) { // set transition code in the graph rooted at p
+		while (p != null) {
+			if (p.typ == Node.chr || p.typ == Node.clas) {
+				p.code = Node.contextTrans;
+			} else if (p.typ == Node.opt || p.typ == Node.iter) {
+				SetContextTrans(p.sub);
+			} else if (p.typ == Node.alt) {
+				SetContextTrans(p.sub); SetContextTrans(p.down);
+			}
+
+			if (p.up)
+				break;
+			p = p.next;
+		}
+	}
 
 //------------ graph deletability check -----------------
 
-	public static bool DelGraph(Node p) {
+	public static DelGraph(p: Node): bool {
 		return p == null || DelNode(p) && DelGraph(p.next);
-}
+	}
 
-	public static bool DelSubGraph(Node p) {
+	public static DelSubGraph(p: Node): bool  {
 		return p == null || DelNode(p) && (p.up || DelSubGraph(p.next));
-}
+	}
 
-	public static bool DelNode(Node p) {
-		if (p.typ == Node.nt) return p.sym.deletable;
-else if (p.typ == Node.alt) return DelSubGraph(p.sub) || p.down != null && DelSubGraph(p.down);
-else return p.typ == Node.iter || p.typ == Node.opt || p.typ == Node.sem
-			|| p.typ == Node.eps || p.typ == Node.rslv || p.typ == Node.sync;
-}
+	public static DelNode(p: Node): bool {
+		if (p.typ == Node.nt) {
+			return p.sym.deletable;
+		} else if (p.typ == Node.alt) {
+			return DelSubGraph(p.sub) || p.down != null && DelSubGraph(p.down);
+		} else {
+			return p.typ == Node.iter || p.typ == Node.opt || p.typ == Node.sem
+				|| p.typ == Node.eps || p.typ == Node.rslv || p.typ == Node.sync;
+		}
+	}
 
 //----------------- graph printing ----------------------
 
-	string Ptr(Node p, bool up) {
-		string ptr = (p == null)? "0": p.n.ToString();
+	Ptr(p: Node, up: bool): string  {
+		var ptr = (p == null)? "0": p.n.ToString();
 		return (up)? ("-" +ptr): ptr;
-}
+	}
 
-	string Pos(Position pos) {
-		if (pos == null) return "     "; else return String.Format("{0,5}", pos.beg);
-}
+	Pos(pos: Position): string  {
+		if (pos == null) {
+			return "     ";
+		} else {
+			return String.Format("{0,5}", pos.beg);
+		}
+	}
 
-	public string Name(string name) {
+	public Name(name: string): string {
 		return (name + "           ").Substring(0, 12);
-// found no simpler way to get the first 12 characters of the name
-// padded with blanks on the right
-}
+		// found no simpler way to get the first 12 characters of the name
+		// padded with blanks on the right
+	}
 
-	public void PrintNodes() {
+	public PrintNodes() {
 		trace.WriteLine("Graph nodes:");
 		trace.WriteLine("----------------------------------------------------");
 		trace.WriteLine("   n type name          next  down   sub   pos  line");
@@ -480,12 +515,15 @@ else return p.typ == Node.iter || p.typ == Node.opt || p.typ == Node.sem
 		trace.WriteLine("----------------------------------------------------");
 		foreach (Node p in nodes) {
 			trace.Write("{0,4} {1} ", p.n, nTyp[p.typ]);
-			if (p.sym != null)
+			if (p.sym != null) {
 				trace.Write("{0,12} ", Name(p.sym.name));
-else if (p.typ == Node.clas) {
-				CharClass c = (CharClass) classes[p.val];
+			} else if (p.typ == Node.clas) {
+				var c = classes[p.val];
 				trace.Write("{0,12} ", Name(c.name));
-} else trace.Write("             ");
+			} else {
+				trace.Write("             ");
+			}
+
 			trace.Write("{0,5} ", Ptr(p.next, p.up));
 			switch (p.typ) {
 				case Node.t: case Node.nt: case Node.wt:
@@ -500,50 +538,54 @@ else if (p.typ == Node.clas) {
 					trace.Write("             {0,5}", Pos(p.pos)); break;
 				case Node.eps: case Node.any: case Node.sync:
 					trace.Write("                  "); break;
-}
+			}
+
 			trace.WriteLine("{0,5}", p.line);
-}
+		}
 		trace.WriteLine();
-}
+	}
 
 
 //---------------------------------------------------------------------
 //  Character class management
 //---------------------------------------------------------------------
 
-	public ArrayList classes = new ArrayList();
-	public int dummyName = 'A';
+	public classes = new ArrayList();
+	public dummyName = 'A'.charCodeAt(0);
 
-	public CharClass NewCharClass(string name, CharSet s) {
-		if (name == "#") name = "#" +(char) dummyName++;
-		CharClass c = new CharClass(name, s);
+	public NewCharClass(name: string, s: CharSet): CharClass {
+		if (name == "#") {
+			name = "#" + String.fromCharCode(dummyName++);
+		}
+
+		var c = new CharClass(name, s);
 		c.n = classes.Count;
 		classes.Add(c);
 		return c;
-}
+	}
 
-	public CharClass FindCharClass(string name) {
+	public FindCharClass(name: string): CharClass  {
 		foreach (CharClass c in classes)
 			if (c.name == name) return c;
 		return null;
-}
+	}
 
-	public CharClass FindCharClass(CharSet s) {
+	public FindCharClass(s: CharSet): CharClass  {
 		foreach (CharClass c in classes)
 			if (s.Equals(c.set )) return c;
 		return null;
-}
+	}
 
-	public CharSet CharClassSet(int i) {
-		return ((CharClass) classes[i]).set;
-}
+	public CharClassSet(i: number): CharSet  {
+		return classes[i].set;
+	}
 
 //----------- character class printing
 
-	string Ch(int ch) {
+	Ch(ch : string): string {
 		if (ch < ' ' || ch >= 127 || ch == '\'' || ch == '\\') return ch.ToString();
-else return String.Format("'{0}'", (char) ch);
-}
+		else return String.Format("'{0}'", (char) ch);
+	}
 
 	void WriteCharSet(CharSet s) {
 		for (CharSet.Range r = s.head; r != null; r = r.next)
