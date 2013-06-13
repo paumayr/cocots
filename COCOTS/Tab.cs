@@ -1027,7 +1027,7 @@ public class Tab {
 					BitArray soFar = new BitArray(terminals.Count);
 					for (Node q = p; q != null; q = q.down) {
 						if (q.sub.typ == Node.rslv) {
-						  BitArray fs = Expected(q.sub.next, curSy);
+							BitArray fs = Expected(q.sub.next, curSy);
 							if (Sets.Intersect(fs, soFar))
 								ResErr(q.sub, "Warning: Resolver will never be evaluated. " +
 								"Place it at previous conflicting alternative.");

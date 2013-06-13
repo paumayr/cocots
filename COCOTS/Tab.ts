@@ -584,23 +584,28 @@ export class Tab {
 
 	Ch(ch : string): string {
 		if (ch < ' ' || ch >= 127 || ch == '\'' || ch == '\\') return ch.ToString();
-		else return String.Format("'{0}'", (char) ch);
+		else return String.Format("'{0}'", ch);
 	}
 
-	void WriteCharSet(CharSet s) {
-		for (CharSet.Range r = s.head; r != null; r = r.next)
-			if (r.from < r.to) { trace.Write(Ch(r.from) + ".." +Ch(r.to) + " "); }
-else { trace.Write(Ch(r.from) + " "); }
-}
+	WriteCharSet(s: CharSet) {
+		for (var r = s.head; r != null; r = r.next) {
+			if (r.from < r.to) {
+				trace.Write(Ch(r.from) + ".." + Ch(r.to) + " ");
+			} else {
+				trace.Write(Ch(r.from) + " ");
+			}
+		}
+	}
 
-	public void WriteCharClasses () {
+	public WriteCharClasses () {
 		foreach (CharClass c in classes) {
 			trace.Write("{0,-10}: ", c.name);
 			WriteCharSet(c.set );
 			trace.WriteLine();
-}
+		}
+
 		trace.WriteLine();
-}
+	}
 
 
 //---------------------------------------------------------------------
@@ -608,226 +613,268 @@ else { trace.Write(Ch(r.from) + " "); }
 //---------------------------------------------------------------------
 
 /* Computes the first set for the graph rooted at p */
-	BitArray First0(Node p, BitArray mark) {
-		BitArray fs = new BitArray(terminals.Count);
+	First0(p: Node, mark: BitArray): BitArray {
+		var fs = new BitArray(terminals.Count);
 		while (p != null && !mark[p.n]) {
 			mark[p.n]= true;
 			switch (p.typ) {
 				case Node.nt: {
-					if (p.sym.firstReady) fs.Or(p.sym.first);
-else fs.Or(First0(p.sym.graph, mark));
+					if (p.sym.firstReady) {
+						fs.Or(p.sym.first);
+					} else {
+						fs.Or(First0(p.sym.graph, mark));
+					}
 					break;
-}
+				}
 				case Node.t: case Node.wt: {
 					fs[p.sym.n]= true; break;
-}
+				}
 				case Node.any: {
 					fs.Or(p.set ); break;
-}
+				}
 				case Node.alt: {
 					fs.Or(First0(p.sub, mark));
 					fs.Or(First0(p.down, mark));
 					break;
-}
+				}
 				case Node.iter: case Node.opt: {
 					fs.Or(First0(p.sub, mark));
 					break;
-}
-}
-			if (!DelNode(p)) break;
+				}
+			}
+			if (!DelNode(p))
+				break;
 			p = p.next;
-}
+		}
 		return fs;
-}
+	}
 
-	public BitArray First(Node p) {
-		BitArray fs = First0(p, new BitArray(nodes.Count));
+	public First(p: Node): BitArray  {
+		var fs = First0(p, new BitArray(nodes.Count));
 		if (ddt[3]) {
 			trace.WriteLine();
-			if (p != null) trace.WriteLine("First: node = {0}", p.n);
-else trace.WriteLine("First: node = null");
-			PrintSet(fs, 0);
-}
-		return fs;
-}
+			if (p != null) {
+				trace.WriteLine("First: node = {0}", p.n);
+			} else {
+				trace.WriteLine("First: node = null");
+			}
 
-	void CompFirstSets() {
+			PrintSet(fs, 0);
+		}
+		return fs;
+	}
+
+	CompFirstSets() {
 		foreach (Symbol sym in nonterminals) {
 			sym.first = new BitArray(terminals.Count);
 			sym.firstReady = false;
-}
+		}
 		foreach (Symbol sym in nonterminals) {
 			sym.first = First(sym.graph);
 			sym.firstReady = true;
-}
-}
+		}
+	}
 
-	void CompFollow(Node p) {
+	CompFollow(p: Node) {
 		while (p != null && !visited[p.n]) {
 			visited[p.n]= true;
 			if (p.typ == Node.nt) {
-				BitArray s = First(p.next);
+				var s = First(p.next);
 				p.sym.follow.Or(s);
 				if (DelGraph(p.next))
-					p.sym.nts[curSy.n]= true;
-} else if (p.typ == Node.opt || p.typ == Node.iter) {
+				{
+					p.sym.nts[curSy.n] = true;
+				}
+			} else if (p.typ == Node.opt || p.typ == Node.iter) {
 				CompFollow(p.sub);
-} else if (p.typ == Node.alt) {
+			} else if (p.typ == Node.alt) {
 				CompFollow(p.sub); CompFollow(p.down);
-}
+			}
 			p = p.next;
-}
-}
+		}
+	}
 
-	void Complete(Symbol sym) {
+	Complete(sym: Symbol) {
 		if (!visited[sym.n]) {
 			visited[sym.n]= true;
 			foreach (Symbol s in nonterminals) {
 				if (sym.nts[s.n]) {
 					Complete(s);
 					sym.follow.Or(s.follow);
-					if (sym == curSy) sym.nts[s.n]= false;
-}
-}
-}
-}
+					if (sym == curSy) {
+						sym.nts[s.n] = false;
+					}
+				}
+			}
+		}
+	}
 
-	void CompFollowSets() {
+	CompFollowSets() {
 		foreach (Symbol sym in nonterminals) {
 			sym.follow = new BitArray(terminals.Count);
 			sym.nts = new BitArray(nonterminals.Count);
-}
-		gramSy.follow[eofSy.n]= true;
+		}
+
+		gramSy.follow[eofSy.n] = true;
 		visited = new BitArray(nodes.Count);
 		foreach (Symbol sym in nonterminals) { // get direct successors of nonterminals
 			curSy = sym;
 			CompFollow(sym.graph);
-}
+		}
+
 		foreach (Symbol sym in nonterminals) { // add indirect successors to followers
 			visited = new BitArray(nonterminals.Count);
 			curSy = sym;
 			Complete(sym);
-}
-}
+		}
+	}
 
-	Node LeadingAny(Node p) {
-		if (p == null) return null;
-		Node a = null;
-		if (p.typ == Node.any) a = p;
-else if (p.typ == Node.alt) {
+	LeadingAny(p: Node): Node {
+		if (p == null) {
+			return null;
+		}
+
+		var a: Node = null;
+		if (p.typ == Node.any) {
+			a = p;
+		}
+		else if (p.typ == Node.alt) {
 			a = LeadingAny(p.sub);
-			if (a == null) a = LeadingAny(p.down);
-}
-else if (p.typ == Node.opt || p.typ == Node.iter) a = LeadingAny(p.sub);
-		if (a == null && DelNode(p) && !p.up) a = LeadingAny(p.next);
-		return a;
-}
+			if (a == null) {
+				a = LeadingAny(p.down);
+			}
+		}
+		else if (p.typ == Node.opt || p.typ == Node.iter) {
+			a = LeadingAny(p.sub);
+		}
 
-	void FindAS(Node p) { // find ANY sets
-		Node a;
+		if (a == null && DelNode(p) && !p.up) {
+			a = LeadingAny(p.next);
+		}
+
+		return a;
+	}
+
+	FindAS(p: Node) { // find ANY sets
+		var a: Node;
 		while (p != null) {
 			if (p.typ == Node.opt || p.typ == Node.iter) {
 				FindAS(p.sub);
 				a = LeadingAny(p.sub);
-				if (a != null) Sets.Subtract(a.set , First(p.next));
-} else if (p.typ == Node.alt) {
-				BitArray s1 = new BitArray(terminals.Count);
-				Node q = p;
+				if (a != null) {
+					Sets.Subtract(a.set , First(p.next));
+				}
+			} else if (p.typ == Node.alt) {
+				var s1 = new BitArray(terminals.Count);
+				var q = p;
 				while (q != null) {
 					FindAS(q.sub);
 					a = LeadingAny(q.sub);
-					if (a != null)
+					if (a != null) {
 						Sets.Subtract(a.set , First(q.down).Or(s1));
-else
+					} else {
 						s1.Or(First(q.sub));
+					}
 					q = q.down;
-}
-}
+				}
+			}
 
-// Remove alternative terminals before ANY, in the following
-// examples a and b must be removed from the ANY set:
-// [a] ANY, or {a|b} ANY, or [a][b] ANY, or (a|) ANY, or
-// A = [a]. A ANY
+			// Remove alternative terminals before ANY, in the following
+			// examples a and b must be removed from the ANY set:
+			// [a] ANY, or {a|b} ANY, or [a][b] ANY, or (a|) ANY, or
+			// A = [a]. A ANY
 			if (DelNode(p)) {
 				a = LeadingAny(p.next);
 				if (a != null) {
-					Node q = (p.typ == Node.nt)? p.sym.graph: p.sub;
+					var q = (p.typ == Node.nt)? p.sym.graph: p.sub;
 					Sets.Subtract(a.set , First(q));
-}
-}
+				}
+			}
 
-			if (p.up) break;
+			if (p.up) {
+				break;
+			}
+
 			p = p.next;
-}
-}
+		}
+	}
 
-	void CompAnySets() {
+	CompAnySets() {
 		foreach (Symbol sym in nonterminals) FindAS(sym.graph);
-}
+	}
 
-	public BitArray Expected(Node p, Symbol curSy) {
-		BitArray s = First(p);
-		if (DelGraph(p)) s.Or(curSy.follow);
+	public Expected(p: Node, curSy: Symbol): BitArray {
+		var s = First(p);
+		if (DelGraph(p)) {
+			s.Or(curSy.follow);
+		}
 		return s;
-}
+	}
 
-// does not look behind resolvers; only called during LL(1) test and in CheckRes
-	public BitArray Expected0(Node p, Symbol curSy) {
-		if (p.typ == Node.rslv) return new BitArray(terminals.Count);
-else return Expected(p, curSy);
-}
+	// does not look behind resolvers; only called during LL(1) test and in CheckRes
+	public Expected0(p: Node, curSy: Symbol): BitArray {
+		if (p.typ == Node.rslv) {
+			return new BitArray(terminals.Count);
+		} else {
+			return Expected(p, curSy);
+		}
+	}
 
-	void CompSync(Node p) {
+	CompSync(p: Node) {
 		while (p != null && !visited[p.n]) {
 			visited[p.n]= true;
 			if (p.typ == Node.sync) {
-				BitArray s = Expected(p.next, curSy);
+				var s = Expected(p.next, curSy);
 				s[eofSy.n]= true;
 				allSyncSets.Or(s);
 				p.set = s;
-} else if (p.typ == Node.alt) {
+			} else if (p.typ == Node.alt) {
 				CompSync(p.sub); CompSync(p.down);
-} else if (p.typ == Node.opt || p.typ == Node.iter)
+			} else if (p.typ == Node.opt || p.typ == Node.iter) {
 				CompSync(p.sub);
+			}
 			p = p.next;
-}
-}
+		}
+	}
 
-	void CompSyncSets() {
+	CompSyncSets() {
 		allSyncSets = new BitArray(terminals.Count);
 		allSyncSets[eofSy.n]= true;
 		visited = new BitArray(nodes.Count);
 		foreach (Symbol sym in nonterminals) {
 			curSy = sym;
 			CompSync(curSy.graph);
-}
-}
+		}
+	}
 
-	public void SetupAnys() {
-		foreach (Node p in nodes)
+	public SetupAnys() {
+		foreach(Node p in nodes) {
 			if (p.typ == Node.any) {
 				p.set = new BitArray(terminals.Count, true);
-				p.set [eofSy.n]= false;
-}
-}
+				p.set [eofSy.n] = false;
+			}
+		}
+	}
 
-	public void CompDeletableSymbols() {
-		bool changed;
+	public CompDeletableSymbols() {
+		var changed: bool;
 		do {
 			changed = false;
-			foreach (Symbol sym in nonterminals)
+			foreach(Symbol sym in nonterminals) {
 				if (!sym.deletable && sym.graph != null && DelGraph(sym.graph)) {
 					sym.deletable = true; changed = true;
-}
-} while (changed);
-		foreach (Symbol sym in nonterminals)
-			if (sym.deletable) errors.Warning("  " +sym.name + " deletable");
-}
+				}
+			}
+		} while (changed);
+		foreach(Symbol sym in nonterminals) {
+			if (sym.deletable) errors.Warning("  " + sym.name + " deletable");
+		}
+	}
 
-	public void RenumberPragmas() {
-		int n = terminals.Count;
+	public RenumberPragmas() {
+		var n = terminals.Count;
 		foreach (Symbol sym in pragmas) sym.n = n++;
-}
+	}
 
 	public void CompSymbolSets() {
 		CompDeletableSymbols();
@@ -844,48 +891,50 @@ else return Expected(p, curSy);
 				trace.Write("first:   "); PrintSet(sym.first, 10);
 				trace.Write("follow:  "); PrintSet(sym.follow, 10);
 				trace.WriteLine();
-}
-}
+			}
+		}
 		if (ddt[4]) {
 			trace.WriteLine();
 			trace.WriteLine("ANY and SYNC sets:");
 			trace.WriteLine("-----------------");
-			foreach (Node p in nodes)
+			foreach(Node p in nodes) {
 				if (p.typ == Node.any || p.typ == Node.sync) {
 					trace.Write("{0,4} {1,4}: ", p.n, nTyp[p.typ]);
 					PrintSet(p.set , 11);
-}
-}
-}
+				}
+			}
+		}
+	}
 
 //---------------------------------------------------------------------
 //  String handling
 //---------------------------------------------------------------------
 
-	char Hex2Char(string s) {
-		int val = 0;
-		for (int i = 0; i < s.Length; i++) {
+	Hex2Char(string s) : string {
+		var val = 0;
+		for (var i = 0; i < s.Length; i++) {
 			char ch = s[i];
 			if ('0' <= ch && ch <= '9') val = 16 * val +(ch - '0');
-else if ('a' <= ch && ch <= 'f') val = 16 * val +(10 +ch - 'a');
-else if ('A' <= ch && ch <= 'F') val = 16 * val +(10 +ch - 'A');
-else parser.SemErr("bad escape sequence in string or character");
-}
+			else if ('a' <= ch && ch <= 'f') val = 16 * val +(10 +ch - 'a');
+			else if ('A' <= ch && ch <= 'F') val = 16 * val +(10 +ch - 'A');
+			else parser.SemErr("bad escape sequence in string or character");
+		}
+
 		if (val > char.MaxValue) /* pdt */
 			parser.SemErr("bad escape sequence in string or character");
 		return (char) val;
-}
+	}
 
-	string Char2Hex(char ch) {
-		StringWriter w = new StringWriter();
+	void Char2Hex(ch : string) : string {
+		var w = new StringWriter();
 		w.Write("\\u{0:x4}", (int) ch);
 		return w.ToString();
-}
+	}
 
-	public string Unescape (string s) {
-/* replaces escape sequences in s by their Unicode values. */
-		StringBuilder buf = new StringBuilder();
-		int i = 0;
+	public Unescape(s: string): string {
+		/* replaces escape sequences in s by their Unicode values. */
+		var buf = new StringBuilder();
+		var i = 0;
 		while (i < s.Length) {
 			if (s[i]== '\\') {
 				switch (s[i+1]) {
@@ -903,21 +952,22 @@ else parser.SemErr("bad escape sequence in string or character");
 					case 'u': case 'x':
 						if (i +6 <= s.Length) {
 							buf.Append(Hex2Char(s.Substring(i+2, 4))); i += 6; break;
-} else {
+						} else {
 							parser.SemErr("bad escape sequence in string or character"); i = s.Length; break;
-}
+						}
 					default: parser.SemErr("bad escape sequence in string or character"); i += 2; break;
-}
-} else {
+				}
+			} else {
 				buf.Append(s[i]);
 				i++;
-}
-}
-		return buf.ToString();
-}
+			}
+		}
 
-	public string Escape (string s) {
-		StringBuilder buf = new StringBuilder();
+		return buf.ToString();
+	}
+
+	public Escape(s: string): string {
+		var buf = new StringBuilder();
 		foreach (char ch in s) {
 			switch(ch) {
 				case '\\': buf.Append("\\\\"); break;
@@ -928,57 +978,76 @@ else parser.SemErr("bad escape sequence in string or character");
 				case '\n': buf.Append("\\n"); break;
 				default:
 					if (ch < ' ' || ch > '\u007f') buf.Append(Char2Hex(ch));
-else buf.Append(ch);
+					else buf.Append(ch);
 					break;
-}
-}
+			}
+		}
+
 		return buf.ToString();
-}
+	}
 
 //---------------------------------------------------------------------
 //  Grammar checks
 //---------------------------------------------------------------------
 
-	public bool GrammarOk() {
-		bool ok = NtsComplete()
+	public GrammarOk(): bool {
+		var ok = NtsComplete()
 			&& AllNtReached()
 			&& NoCircularProductions()
 			&& AllNtToTerm();
-    if (ok) { CheckResolvers(); CheckLL1(); }
-    return ok;
-}
+		if (ok) {
+			CheckResolvers();
+			CheckLL1();
+		}
+
+		return ok;
+	}
 
 //--------------- check for circular productions ----------------------
 
 	class CNode {	// node of list for finding circular productions
-		public Symbol left, right;
+		public left: Symbol;
+		public right: Symbol;
 
 		public CNode (Symbol l, Symbol r) {
 			left = l; right = r;
-}
-}
+		}
+	}
 
-	void GetSingles(Node p, ArrayList singles) {
-		if (p == null) return;  // end of graph
+	GetSingles(p: Node, singles: ArrayList) {
+		if (p == null) {
+			return;  // end of graph
+		}
 		if (p.typ == Node.nt) {
-			if (p.up || DelGraph(p.next)) singles.Add(p.sym);
-} else if (p.typ == Node.alt || p.typ == Node.iter || p.typ == Node.opt) {
+			if (p.up || DelGraph(p.next)) {
+				singles.Add(p.sym);
+			}
+		} else if (p.typ == Node.alt || p.typ == Node.iter || p.typ == Node.opt) {
 			if (p.up || DelGraph(p.next)) {
 				GetSingles(p.sub, singles);
-				if (p.typ == Node.alt) GetSingles(p.down, singles);
-}
-}
-		if (!p.up && DelNode(p)) GetSingles(p.next, singles);
-}
+				if (p.typ == Node.alt) {
+					GetSingles(p.down, singles);
+				}
+			}
+		}
+		if (!p.up && DelNode(p)) {
+			GetSingles(p.next, singles);
+		}
+	}
 
-	public bool NoCircularProductions() {
-		bool ok, changed, onLeftSide, onRightSide;
-		ArrayList list = new ArrayList();
+	public NoCircularProductions(): bool {
+		var ok: bool;
+		var changed: bool;
+		var onLeftSide: bool;
+		var onRightSide: bool;
+		var list = new ArrayList();
 		foreach (Symbol sym in nonterminals) {
-			ArrayList singles = new ArrayList();
+			var singles = new ArrayList();
 			GetSingles(sym.graph, singles); // get nonterminals s such that sym-->s
-			foreach (Symbol s in singles) list.Add(new CNode(sym, s));
-}
+			foreach(Symbol s in singles) {
+				list.Add(new CNode(sym, s));
+			}
+		}
 		do {
 			changed = false;
 			for (int i = 0; i < list.Count; i++) {
@@ -987,45 +1056,51 @@ else buf.Append(ch);
 				foreach (CNode m in list) {
 					if (n.left == m.right) onRightSide = true;
 					if (n.right == m.left) onLeftSide = true;
-}
+				}
 				if (!onLeftSide || !onRightSide) {
 					list.Remove(n); i--; changed = true;
-}
-}
-} while(changed);
+				}
+			}
+		} while(changed);
 		ok = true;
 		foreach (CNode n in list) {
 			ok = false;
 			errors.SemErr("  " +n.left.name + " --> " +n.right.name);
-}
+		}
 		return ok;
-}
+	}
 
 //--------------- check for LL(1) errors ----------------------
 
-	void LL1Error(int cond, Symbol sym) {
-		string s = "  LL1 warning in " +curSy.name + ": ";
-		if (sym != null) s += sym.name + " is ";
+	LL1Error(cond: number, sym: Symbol) {
+		var s = "  LL1 warning in " +curSy.name + ": ";
+		if (sym != null) {
+			s += sym.name + " is ";
+		}
+
 		switch (cond) {
 			case 1: s += "start of several alternatives"; break;
 			case 2: s += "start & successor of deletable structure"; break;
 			case 3: s += "an ANY node that matches no symbol"; break;
 			case 4: s += "contents of [...] or {...} must not be deletable"; break;
-}
+		}
 		errors.Warning(s);
-}
+	}
 
-	void CheckOverlap(BitArray s1, BitArray s2, int cond) {
+	CheckOverlap(s1: BitArray, s2: BitArray, cond: number) {
 		foreach (Symbol sym in terminals) {
-			if (s1[sym.n]&& s2[sym.n]) LL1Error(cond, sym);
-}
-}
+			if (s1[sym.n] && s2[sym.n]) {
+				LL1Error(cond, sym);
+			}
+		}
+	}
 
-	void CheckAlts(Node p) {
-		BitArray s1, s2;
+	CheckAlts(p: Node) {
+		var s1: BitArray;
+		var s2: BitArray;
 		while (p != null) {
 			if (p.typ == Node.alt) {
-				Node q = p;
+				var q = p;
 				s1 = new BitArray(terminals.Count);
 				while (q != null) { // for all alternatives
 					s2 = Expected0(q.sub, curSy);
@@ -1033,115 +1108,141 @@ else buf.Append(ch);
 					s1.Or(s2);
 					CheckAlts(q.sub);
 					q = q.down;
-}
-} else if (p.typ == Node.opt || p.typ == Node.iter) {
-				if (DelSubGraph(p.sub)) LL1Error(4, null); // e.g. [[...]]
-else {
+				}
+			} else if (p.typ == Node.opt || p.typ == Node.iter) {
+				if (DelSubGraph(p.sub)) {
+					LL1Error(4, null); // e.g. [[...]]
+				} else {
 					s1 = Expected0(p.sub, curSy);
 					s2 = Expected(p.next, curSy);
 					CheckOverlap(s1, s2, 2);
-}
-				CheckAlts(p.sub);
-} else if (p.typ == Node.any) {
-				if (Sets.Elements(p.set ) == 0) LL1Error(3, null);
-// e.g. {ANY} ANY or [ANY] ANY or ( ANY | ANY )
-}
-			if (p.up) break;
-			p = p.next;
-}
-}
+				}
 
-	public void CheckLL1() {
+				CheckAlts(p.sub);
+			} else if (p.typ == Node.any) {
+				if (Sets.Elements(p.set ) == 0) {
+					LL1Error(3, null);
+					// e.g. {ANY} ANY or [ANY] ANY or ( ANY | ANY )
+				}
+			}
+			if (p.up) {
+				break;
+			}
+			p = p.next;
+		}
+	}
+
+	public CheckLL1() {
 		foreach (Symbol sym in nonterminals) {
 			curSy = sym;
 			CheckAlts(curSy.graph);
-}
-}
+		}
+	}
 
 //------------- check if resolvers are legal  --------------------
 
-	void ResErr(Node p, string msg) {
+	ResErr(p: Node, msg: string) {
 		errors.Warning(p.line, p.pos.col, msg);
-}
+	}
 
-	void CheckRes(Node p, bool rslvAllowed) {
+	CheckRes(p: Node, rslvAllowed: bool) {
 		while (p != null) {
 			switch (p.typ) {
 				case Node.alt:
-					BitArray expected = new BitArray(terminals.Count);
-					for (Node q = p; q != null; q = q.down)
+					var expected = new BitArray(terminals.Count);
+					for (Node q = p; q != null; q = q.down) {
 						expected.Or(Expected0(q.sub, curSy));
-					BitArray soFar = new BitArray(terminals.Count);
+					}
+
+					var soFar = new BitArray(terminals.Count);
 					for (Node q = p; q != null; q = q.down) {
 						if (q.sub.typ == Node.rslv) {
-						  BitArray fs = Expected(q.sub.next, curSy);
-							if (Sets.Intersect(fs, soFar))
+							var fs = Expected(q.sub.next, curSy);
+							if (Sets.Intersect(fs, soFar)) {
 								ResErr(q.sub, "Warning: Resolver will never be evaluated. " +
 								"Place it at previous conflicting alternative.");
-							if (!Sets.Intersect(fs, expected))
+							}
+
+							if (!Sets.Intersect(fs, expected)) {
 								ResErr(q.sub, "Warning: Misplaced resolver: no LL(1) conflict.");
-} else soFar.Or(Expected(q.sub, curSy));
+							}
+						} else {
+							soFar.Or(Expected(q.sub, curSy));
+						}
+
 						CheckRes(q.sub, true);
-}
+					}
 					break;
 				case Node.iter: case Node.opt:
 					if (p.sub.typ == Node.rslv) {
-						BitArray fs = First(p.sub.next);
-						BitArray fsNext = Expected(p.next, curSy);
-						if (!Sets.Intersect(fs, fsNext))
+						var fs = First(p.sub.next);
+						var fsNext = Expected(p.next, curSy);
+						if (!Sets.Intersect(fs, fsNext)) {
 							ResErr(p.sub, "Warning: Misplaced resolver: no LL(1) conflict.");
-}
+						}
+					}
+
 					CheckRes(p.sub, true);
 					break;
 				case Node.rslv:
-					if (!rslvAllowed)
+					if (!rslvAllowed) {
 						ResErr(p, "Warning: Misplaced resolver: no alternative.");
+					}
 					break;
-}
-			if (p.up) break;
+			}	
+
+			if (p.up) {
+				break;
+			}
+
 			p = p.next;
 			rslvAllowed = false;
-}
-}
+		}
+	}
 
-	public void CheckResolvers() {
+	public CheckResolvers() {
 		foreach (Symbol sym in nonterminals) {
 			curSy = sym;
 			CheckRes(curSy.graph, false);
-}
-}
+		}
+	}
 
 //------------- check if every nts has a production --------------------
 
-	public bool NtsComplete() {
-		bool complete = true;
+	public NtsComplete() : bool {
+		var complete = true;
 		foreach (Symbol sym in nonterminals) {
 			if (sym.graph == null) {
 				complete = false;
 				errors.SemErr("  No production for " +sym.name);
-}
-}
+			}
+		}
 		return complete;
-}
+	}
 
 //-------------- check if every nts can be reached  -----------------
 
-	void MarkReachedNts(Node p) {
+	MarkReachedNts(Node p) {
 		while (p != null) {
 			if (p.typ == Node.nt && !visited[p.sym.n]) { // new nt reached
 				visited[p.sym.n]= true;
 				MarkReachedNts(p.sym.graph);
-} else if (p.typ == Node.alt || p.typ == Node.iter || p.typ == Node.opt) {
+			} else if (p.typ == Node.alt || p.typ == Node.iter || p.typ == Node.opt) {
 				MarkReachedNts(p.sub);
-				if (p.typ == Node.alt) MarkReachedNts(p.down);
-}
-			if (p.up) break;
-			p = p.next;
-}
-}
+				if (p.typ == Node.alt) {
+					MarkReachedNts(p.down);
+				}
+			}
 
-	public bool AllNtReached() {
-		bool ok = true;
+			if (p.up) {
+				break;
+			}
+			p = p.next;
+		}
+	}
+
+	public AllNtReached(): bool {
+		var ok = true;
 		visited = new BitArray(nonterminals.Count);
 		visited[gramSy.n]= true;
 		MarkReachedNts(gramSy.graph);
@@ -1149,64 +1250,79 @@ else {
 			if (!visited[sym.n]) {
 				ok = false;
 				errors.Warning("  " +sym.name + " cannot be reached");
-}
-}
+			}
+		}
 		return ok;
-}
+	}
 
 //--------- check if every nts can be derived to terminals  ------------
 
-	bool IsTerm(Node p, BitArray mark) { // true if graph can be derived to terminals
+	IsTerm(p: Node, mark: BitArray): bool { // true if graph can be derived to terminals
 		while (p != null) {
-			if (p.typ == Node.nt && !mark[p.sym.n]) return false;
-			if (p.typ == Node.alt && !IsTerm(p.sub, mark)
-			&& (p.down == null || !IsTerm(p.down, mark))) return false;
-			if (p.up) break;
-			p = p.next;
-}
-		return true;
-}
+			if (p.typ == Node.nt && !mark[p.sym.n]) {
+				return false;
+			}
 
-	public bool AllNtToTerm() {
-		bool changed, ok = true;
-		BitArray mark = new BitArray(nonterminals.Count);
+			if (p.typ == Node.alt && !IsTerm(p.sub, mark)
+				&& (p.down == null || !IsTerm(p.down, mark))) {
+				return false;
+			}
+
+			if (p.up) {
+				break;
+			}
+
+			p = p.next;
+		}
+		return true;
+	}
+
+	public AllNtToTerm(): bool {
+		var changed: bool;
+		var ok = true;
+		var mark = new BitArray(nonterminals.Count);
 // a nonterminal is marked if it can be derived to terminal symbols
 		do {
 			changed = false;
-			foreach (Symbol sym in nonterminals)
-				if (!mark[sym.n]&& IsTerm(sym.graph, mark)) {
-					mark[sym.n]= true; changed = true;
-}
-} while (changed);
-		foreach (Symbol sym in nonterminals)
+			foreach(Symbol sym in nonterminals) {
+				if (!mark[sym.n] && IsTerm(sym.graph, mark)) {
+					mark[sym.n] = true; changed = true;
+				}
+			}
+		} while (changed);
+
+		foreach(Symbol sym in nonterminals) {
 			if (!mark[sym.n]) {
 				ok = false;
-				errors.SemErr("  " +sym.name + " cannot be derived to terminals");
-}
+				errors.SemErr("  " + sym.name + " cannot be derived to terminals");
+			}
+		}
+
 		return ok;
-}
+	}
 
 //---------------------------------------------------------------------
 //  Cross reference list
 //---------------------------------------------------------------------
 
-	public void XRef() {
-		SortedList xref = new SortedList(new SymbolComp());
-// collect lines where symbols have been defined
+	public XRef() {
+		var xref = new SortedList(new SymbolComp());
+		// collect lines where symbols have been defined
 		foreach (Symbol sym in nonterminals) {
 			ArrayList list = (ArrayList) xref[sym];
 			if (list == null) {list = new ArrayList(); xref[sym]= list; }
 			list.Add(-sym.line);
-}
-// collect lines where symbols have been referenced
+		}
+		// collect lines where symbols have been referenced
 		foreach (Node n in nodes) {
 			if (n.typ == Node.t || n.typ == Node.wt || n.typ == Node.nt) {
 				ArrayList list = (ArrayList) xref[n.sym];
 				if (list == null) {list = new ArrayList(); xref[n.sym]= list; }
 				list.Add(n.line);
-}
-}
-// print cross reference list
+			}
+		}
+
+		// print cross reference list
 		trace.WriteLine();
 		trace.WriteLine("Cross reference list:");
 		trace.WriteLine("--------------------"); trace.WriteLine();
@@ -1218,46 +1334,52 @@ else {
 				if (col +5 > 80) {
 					trace.WriteLine();
 					for (col = 1; col <= 14; col++) trace.Write(" ");
-}
+				}
 				trace.Write("{0,5}", line); col += 5;
-}
+			}
 			trace.WriteLine();
-}
+		}
 		trace.WriteLine(); trace.WriteLine();
-}
+	}
 
-	public void SetDDT(string s) {
+	public SetDDT(s: string) {
 		s = s.ToUpper();
 		foreach (char ch in s) {
-			if ('0' <= ch && ch <= '9') ddt[ch - '0']= true;
-else switch (ch) {
-				case 'A': ddt[0]= true; break; // trace automaton
-				case 'F': ddt[1]= true; break; // list first/follow sets
-				case 'G': ddt[2]= true; break; // print syntax graph
-				case 'I': ddt[3]= true; break; // trace computation of first sets
-				case 'J': ddt[4]= true; break; // print ANY and SYNC sets
-				case 'P': ddt[8]= true; break; // print statistics
-				case 'S': ddt[6]= true; break; // list symbol table
-				case 'X': ddt[7]= true; break; // list cross reference table
-				default: break;
-}
-}
-}
+			if ('0' <= ch && ch <= '9') {
+				ddt[ch - '0'] = true;
+			} else {
+				switch (ch) {
+					case 'A': ddt[0] = true; break; // trace automaton
+					case 'F': ddt[1] = true; break; // list first/follow sets
+					case 'G': ddt[2] = true; break; // print syntax graph
+					case 'I': ddt[3] = true; break; // trace computation of first sets
+					case 'J': ddt[4] = true; break; // print ANY and SYNC sets
+					case 'P': ddt[8] = true; break; // print statistics
+					case 'S': ddt[6] = true; break; // list symbol table
+					case 'X': ddt[7] = true; break; // list cross reference table
+					default: break;
+				}
+			}
+		}
+	}
 
-	public void SetOption(string s) {
-		string[]option = s.Split(new char[]{'='}, 2);
-		string name = option[0], value = option[1];
+	public SetOption(s: string) {
+		var option: string[] = s.Split(new char[]{'='}, 2);
+		var name :string = option[0];
+		var value : string = option[1];
 		if ("$namespace".Equals(name)) {
-			if (nsName == null) nsName = value;
-} else if ("$checkEOF".Equals(name)) {
+			if (nsName == null) {
+				nsName = value;
+			}
+		} else if ("$checkEOF".Equals(name)) {
 			checkEOF = "true".Equals(value);
-}
-}
+		}
+	}
 
 	class SymbolComp: IComparer {
-		public int Compare(Object x, Object y) {
-			return ((Symbol) x).name.CompareTo(((Symbol) y).name);
-}
+		public Compare(x : Symbol, y : Symbol) : number {
+			return x.name.CompareTo(y.name);
+	}
 }
 
 } // end Tab
