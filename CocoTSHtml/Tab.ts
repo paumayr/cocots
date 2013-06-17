@@ -69,7 +69,7 @@ export class Symbol {
 	public first: BitArray;       // nt: terminal start symbols
 	public follow: BitArray;      // nt: terminal followers
 	public nts: BitArray;         // nt: nonterminals whose followers have to be added to this sym
-	public line : numer;        // source text line number of item in this node
+	public line : number;        // source text line number of item in this node
 	public attrPos: Position;     // nt: position of attributes in source text (or null)
 	public semPos: Position;      // pr: pos of semantic action in source text (or null)
 // nt: pos of local declarations in source text (or null)
@@ -151,6 +151,15 @@ export class Graph {
 /*	constructor(p: Node) {
 		l = p; r = p;
 	}*/
+}
+
+class CNode {	// node of list for finding circular productions
+	public left: Symbol;
+	public right: Symbol;
+
+	public CNode (l: Symbol, r: Symbol) {
+		left = l; right = r;
+	}
 }
 
 //=====================================================================
@@ -247,9 +256,9 @@ export class Tab {
 //  Symbol list management
 //---------------------------------------------------------------------
 
-	public terminals: ArrayList = new ArrayList();
-	public pragmas: ArrayList = new ArrayList();
-	public nonterminals: ArrayList = new ArrayList();
+	public terminals: Symbol[] = []; // Symbol
+	public pragmas: Symbol[] = []; // Symbol
+	public nonterminals: Symbol[]= []; // Symbol
 
 	tKind: string[]= ["fixedToken", "classToken", "litToken", "classLitToken"];
 
@@ -268,10 +277,15 @@ export class Tab {
 	}
 
 	public FindSym(name: string): Symbol  {
-		foreach (Symbol s in terminals)
+		for(var i = 0; i < terminals.length; i++) {
+			var s = terminals[i];
 			if (s.name == name) return s;
-		foreach (Symbol s in nonterminals)
+		}
+		for(var i = 0; i < nonterminals.length; i++) {
+			var s = nonterminals[i];
 			if (s.name == name) return s;
+		}
+
 		return null;
 	}
 
@@ -305,14 +319,15 @@ export class Tab {
 		trace.WriteLine("Symbol Table:");
 		trace.WriteLine("------------"); trace.WriteLine();
 		trace.WriteLine(" nr name          typ  hasAt graph  del    line tokenKind");
-		foreach (Symbol sym in terminals) PrintSym(sym);
-		foreach (Symbol sym in pragmas) PrintSym(sym);
-		foreach (Symbol sym in nonterminals) PrintSym(sym);
+		for(var i = 0; i < terminals.length; i++) { PrintSym(terminals[i]); }
+		for(var i = 0; i < pragmas.length; i++) { PrintSym(pragmas[i]); }
+		for(var i = 0; i < nonterminals.length; i++) { PrintSym(nonterminals[i]); }
 		trace.WriteLine();
 		trace.WriteLine("Literal Tokens:");
 		trace.WriteLine("--------------");
-		foreach (DictionaryEntry e in literals) {
-			trace.WriteLine("_" +((Symbol) e.Value).name + " = " +e.Key + ".");
+		for(var i = 0; i < literals.length; i++) {
+			var e = literals[i];
+			trace.WriteLine("_" + e.Value.name + " = " +e.Key + ".");
 		}
 		trace.WriteLine();
 	}
@@ -321,7 +336,8 @@ export class Tab {
 		var col: number;
 		var len : number;
 		col = indent;
-		foreach (Symbol sym in terminals) {
+		for(var i = 0; i < terminals.length; i++) {
+			var sym = terminals[i];
 			if (s[sym.n]) {
 				len = sym.name.Length;
 				if (col +len >= 80) {
@@ -356,20 +372,20 @@ export class Tab {
 		nodes.Add(node);
 		return node;
 	}
-
+/*
 	public NewNode(typ: number, sub: Node): Node  {
 		var node = NewNode(typ, null, 0);
 		node.sub = sub;
 		return node;
 	}
-
-
+*/
+/*
 	public NewNode(typ : number, val : number, line : number): Node {
 		var node = NewNode(typ, null, line);
 		node.val = val;
 		return node;
 	}
-
+*/
 	public MakeFirstAlt(g: Graph) {
 		g.l = NewNode(Node.alt, g.l);
 		g.l.line = g.l.sub.line;
@@ -425,14 +441,15 @@ export class Tab {
 	public Finish(g: Graph) {
 		var p = g.r;
 		while (p != null) {
-			Node q = p.next; p.next = null;
+			var q = p.next;
+			p.next = null;
 			p = q;
 		}
 	}
 
 	public DeleteNodes() {
-		nodes = new ArrayList();
-		dummyNode = NewNode(Node.eps, null, 0);
+		this.nodes = new ArrayList();
+		this.dummyNode = NewNode(Node.eps, null, 0);
 	}
 
 	public StrToGraph(str: string): Graph  {
@@ -513,7 +530,8 @@ export class Tab {
 		trace.WriteLine("   n type name          next  down   sub   pos  line");
 		trace.WriteLine("                               val  code");
 		trace.WriteLine("----------------------------------------------------");
-		foreach (Node p in nodes) {
+		for (var i = 0; i < nodes.length; i++) {
+			var p = nodes[i];
 			trace.Write("{0,4} {1} ", p.n, nTyp[p.typ]);
 			if (p.sym != null) {
 				trace.Write("{0,12} ", Name(p.sym.name));
@@ -550,7 +568,7 @@ export class Tab {
 //  Character class management
 //---------------------------------------------------------------------
 
-	public classes = new ArrayList();
+	public classes : CharClass[] = [];
 	public dummyName = 'A'.charCodeAt(0);
 
 	public NewCharClass(name: string, s: CharSet): CharClass {
@@ -565,14 +583,19 @@ export class Tab {
 	}
 
 	public FindCharClass(name: string): CharClass  {
-		foreach (CharClass c in classes)
+		for(var i = 0; i < this.classes.length; i++) {
+			var c = this.classes[i];
 			if (c.name == name) return c;
+		}
+
 		return null;
 	}
 
-	public FindCharClass(s: CharSet): CharClass  {
-		foreach (CharClass c in classes)
+	public FindCharClassCS(s: CharSet): CharClass  {
+		for(var i = 0; i < this.classes.length; i++) {
+			var c = this.classes[i];
 			if (s.Equals(c.set )) return c;
+		}
 		return null;
 	}
 
@@ -598,9 +621,10 @@ export class Tab {
 	}
 
 	public WriteCharClasses () {
-		foreach (CharClass c in classes) {
+		for(var i = 0; i < this.classes.length; i++) {
+			var c = this.classes[i];
 			trace.Write("{0,-10}: ", c.name);
-			WriteCharSet(c.set );
+			WriteCharSet(c.set);
 			trace.WriteLine();
 		}
 
@@ -665,11 +689,13 @@ export class Tab {
 	}
 
 	CompFirstSets() {
-		foreach (Symbol sym in nonterminals) {
+		for(var i = 0; i < this.nonterminals.length; i++) {
+			var sym = this.nonterminals[i];
 			sym.first = new BitArray(terminals.Count);
 			sym.firstReady = false;
 		}
-		foreach (Symbol sym in nonterminals) {
+		for(var i = 0; i < this.nonterminals.length; i++) {
+			var sym = this.nonterminals[i];
 			sym.first = First(sym.graph);
 			sym.firstReady = true;
 		}
@@ -697,7 +723,8 @@ export class Tab {
 	Complete(sym: Symbol) {
 		if (!visited[sym.n]) {
 			visited[sym.n]= true;
-			foreach (Symbol s in nonterminals) {
+			for(var i = 0; i < this.nonterminals.length; i++) {
+				var s = this.nonterminals[i];
 				if (sym.nts[s.n]) {
 					Complete(s);
 					sym.follow.Or(s.follow);
@@ -710,19 +737,23 @@ export class Tab {
 	}
 
 	CompFollowSets() {
-		foreach (Symbol sym in nonterminals) {
+		for(var i = 0; i < this.nonterminals.length; i++) {
+			var sym = this.nonterminals[i];
 			sym.follow = new BitArray(terminals.Count);
 			sym.nts = new BitArray(nonterminals.Count);
 		}
 
 		gramSy.follow[eofSy.n] = true;
 		visited = new BitArray(nodes.Count);
-		foreach (Symbol sym in nonterminals) { // get direct successors of nonterminals
+		for(var i = 0; i < this.nonterminals.length; i++) {
+			var sym = this.nonterminals[i];
 			curSy = sym;
 			CompFollow(sym.graph);
 		}
 
-		foreach (Symbol sym in nonterminals) { // add indirect successors to followers
+		// add indirect successors to followers
+		for(var i = 0; i < this.nonterminals.length; i++) {
+			var sym = this.nonterminals[i];
 			visited = new BitArray(nonterminals.Count);
 			curSy = sym;
 			Complete(sym);
@@ -800,7 +831,10 @@ export class Tab {
 	}
 
 	CompAnySets() {
-		foreach (Symbol sym in nonterminals) FindAS(sym.graph);
+		for(var i = 0; i < this.nonterminals.length; i++) {
+			var sym = this.nonterminals[i];
+			FindAS(sym.graph);
+		}
 	}
 
 	public Expected(p: Node, curSy: Symbol): BitArray {
@@ -841,14 +875,16 @@ export class Tab {
 		allSyncSets = new BitArray(terminals.Count);
 		allSyncSets[eofSy.n]= true;
 		visited = new BitArray(nodes.Count);
-		foreach (Symbol sym in nonterminals) {
+		for(var i = 0; i < this.nonterminals.length; i++) {
+			var sym = this.nonterminals[i];
 			curSy = sym;
 			CompSync(curSy.graph);
 		}
 	}
 
 	public SetupAnys() {
-		foreach(Node p in nodes) {
+		for(var i = 0; i < this.nodes.length; i++) {
+			var p = this.nodes[i];
 			if (p.typ == Node.any) {
 				p.set = new BitArray(terminals.Count, true);
 				p.set [eofSy.n] = false;
@@ -860,23 +896,31 @@ export class Tab {
 		var changed: bool;
 		do {
 			changed = false;
-			foreach(Symbol sym in nonterminals) {
+			for(var i = 0; i < this.nonterminals.length; i++) {
+				var sym = this.nonterminals[i];
 				if (!sym.deletable && sym.graph != null && DelGraph(sym.graph)) {
 					sym.deletable = true; changed = true;
 				}
 			}
 		} while (changed);
-		foreach(Symbol sym in nonterminals) {
-			if (sym.deletable) errors.Warning("  " + sym.name + " deletable");
+		
+		for(var i = 0; i < this.nonterminals.length; i++) {
+			var sym = this.nonterminals[i];
+			if (sym.deletable) {
+				errors.Warning("  " +sym.name + " deletable");
+			}
 		}
 	}
 
 	public RenumberPragmas() {
 		var n = terminals.Count;
-		foreach (Symbol sym in pragmas) sym.n = n++;
+		for(var i = 0; i < this.pragmas.length; i++) {
+			var sym = this.pragmas[i];
+			sym.n = n++;
+		}
 	}
 
-	public void CompSymbolSets() {
+	public CompSymbolSets() {
 		CompDeletableSymbols();
 		CompFirstSets();
 		CompAnySets();
@@ -886,7 +930,8 @@ export class Tab {
 			trace.WriteLine();
 			trace.WriteLine("First & follow symbols:");
 			trace.WriteLine("----------------------"); trace.WriteLine();
-			foreach (Symbol sym in nonterminals) {
+			for(var i = 0; i < this.nonterminals.length; i++) {
+				var sym = this.nonterminals[i];
 				trace.WriteLine(sym.name);
 				trace.Write("first:   "); PrintSet(sym.first, 10);
 				trace.Write("follow:  "); PrintSet(sym.follow, 10);
@@ -897,7 +942,8 @@ export class Tab {
 			trace.WriteLine();
 			trace.WriteLine("ANY and SYNC sets:");
 			trace.WriteLine("-----------------");
-			foreach(Node p in nodes) {
+			for(var i = 0; i < this.nodes.length; i++) {
+				var p = this.nodes[i];
 				if (p.typ == Node.any || p.typ == Node.sync) {
 					trace.Write("{0,4} {1,4}: ", p.n, nTyp[p.typ]);
 					PrintSet(p.set , 11);
@@ -910,10 +956,10 @@ export class Tab {
 //  String handling
 //---------------------------------------------------------------------
 
-	Hex2Char(string s) : string {
-		var val = 0;
+	Hex2Char(s: string) : string {
+		var val = "\0";
 		for (var i = 0; i < s.Length; i++) {
-			char ch = s[i];
+			var ch = s[i];
 			if ('0' <= ch && ch <= '9') val = 16 * val +(ch - '0');
 			else if ('a' <= ch && ch <= 'f') val = 16 * val +(10 +ch - 'a');
 			else if ('A' <= ch && ch <= 'F') val = 16 * val +(10 +ch - 'A');
@@ -922,12 +968,12 @@ export class Tab {
 
 		if (val > char.MaxValue) /* pdt */
 			parser.SemErr("bad escape sequence in string or character");
-		return (char) val;
+		return val;
 	}
 
-	void Char2Hex(ch : string) : string {
+	Char2Hex(ch : string) : string {
 		var w = new StringWriter();
-		w.Write("\\u{0:x4}", (int) ch);
+		w.Write("\\u{0:x4}", ch);
 		return w.ToString();
 	}
 
@@ -1004,15 +1050,6 @@ export class Tab {
 	}
 
 //--------------- check for circular productions ----------------------
-
-	class CNode {	// node of list for finding circular productions
-		public left: Symbol;
-		public right: Symbol;
-
-		public CNode (Symbol l, Symbol r) {
-			left = l; right = r;
-		}
-	}
 
 	GetSingles(p: Node, singles: ArrayList) {
 		if (p == null) {
@@ -1222,7 +1259,7 @@ export class Tab {
 
 //-------------- check if every nts can be reached  -----------------
 
-	MarkReachedNts(Node p) {
+	MarkReachedNts(p: Node) {
 		while (p != null) {
 			if (p.typ == Node.nt && !visited[p.sym.n]) { // new nt reached
 				visited[p.sym.n]= true;
@@ -1246,7 +1283,8 @@ export class Tab {
 		visited = new BitArray(nonterminals.Count);
 		visited[gramSy.n]= true;
 		MarkReachedNts(gramSy.graph);
-		foreach (Symbol sym in nonterminals) {
+		for(var i = 0; i < this.nonterminals.length; i++) {
+			var sym = this.nonterminals[i];
 			if (!visited[sym.n]) {
 				ok = false;
 				errors.Warning("  " +sym.name + " cannot be reached");
@@ -1284,14 +1322,16 @@ export class Tab {
 // a nonterminal is marked if it can be derived to terminal symbols
 		do {
 			changed = false;
-			foreach(Symbol sym in nonterminals) {
+			for(var i = 0; i < this.nonterminals.length; i++) {
+				var sym = this.nonterminals[i];
 				if (!mark[sym.n] && IsTerm(sym.graph, mark)) {
 					mark[sym.n] = true; changed = true;
 				}
 			}
 		} while (changed);
 
-		foreach(Symbol sym in nonterminals) {
+		for(var i = 0; i < this.nonterminals.length; i++) {
+			var sym = this.nonterminals[i];
 			if (!mark[sym.n]) {
 				ok = false;
 				errors.SemErr("  " + sym.name + " cannot be derived to terminals");
@@ -1308,15 +1348,17 @@ export class Tab {
 	public XRef() {
 		var xref = new SortedList(new SymbolComp());
 		// collect lines where symbols have been defined
-		foreach (Symbol sym in nonterminals) {
-			ArrayList list = (ArrayList) xref[sym];
+		for(var i = 0; i < this.nonterminals.length; i++) {
+			var sym = this.nonterminals[i];
+			var list = xref[sym];
 			if (list == null) {list = new ArrayList(); xref[sym]= list; }
 			list.Add(-sym.line);
 		}
 		// collect lines where symbols have been referenced
-		foreach (Node n in nodes) {
+		for(var i = 0; i < this.nodes.length; i++) {
+			var n = this.nodes[i];
 			if (n.typ == Node.t || n.typ == Node.wt || n.typ == Node.nt) {
-				ArrayList list = (ArrayList) xref[n.sym];
+				var list = xref[n.sym];
 				if (list == null) {list = new ArrayList(); xref[n.sym]= list; }
 				list.Add(n.line);
 			}
@@ -1326,11 +1368,13 @@ export class Tab {
 		trace.WriteLine();
 		trace.WriteLine("Cross reference list:");
 		trace.WriteLine("--------------------"); trace.WriteLine();
-		foreach (Symbol sym in xref.Keys) {
+		for(var i = 0; i < xref.Keys.length; i++) {
+			var sym = this.xref.Keys[i];
 			trace.Write("  {0,-12}", Name(sym.name));
-			ArrayList list = (ArrayList) xref[sym];
-			int col = 14;
-			foreach (int line in list) {
+			var list = xref[sym];
+			var col: number = 14;
+			for(var j = 0; j < list.length; j++) {
+				var line = list[j];
 				if (col +5 > 80) {
 					trace.WriteLine();
 					for (col = 1; col <= 14; col++) trace.Write(" ");
@@ -1344,7 +1388,8 @@ export class Tab {
 
 	public SetDDT(s: string) {
 		s = s.ToUpper();
-		foreach (char ch in s) {
+		for(var i = 0; i < s.length; i++) {
+			var ch = s[i];
 			if ('0' <= ch && ch <= '9') {
 				ddt[ch - '0'] = true;
 			} else {
@@ -1364,10 +1409,10 @@ export class Tab {
 	}
 
 	public SetOption(s: string) {
-		var option: string[] = s.Split(new char[]{'='}, 2);
+		var option: string[] = s.split("=", 2);
 		var name :string = option[0];
 		var value : string = option[1];
-		if ("$namespace".Equals(name)) {
+		if ("$namespace" == name) {
 			if (nsName == null) {
 				nsName = value;
 			}

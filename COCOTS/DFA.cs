@@ -976,7 +976,14 @@ public class DFA {
 			int targetState = action.target.state.nr;
 			if (action.typ == Node.chr) {
 				string c = Char.ConvertFromUtf32(action.sym);
-				gen.WriteLine("\t\tstart['" + c + "'] = " + targetState + "; ");
+				if (c == "'")
+				{
+					gen.WriteLine("\t\tstart[\"" + c + "\"] = " + targetState + "; ");
+				}
+				else
+				{
+					gen.WriteLine("\t\tstart['" + c + "'] = " + targetState + "; ");
+				}
 			} else {
 				CharSet s = tab.CharClassSet(action.sym);
 				for (CharSet.Range r = s.head; r != null; r = r.next) {
