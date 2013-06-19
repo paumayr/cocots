@@ -31,6 +31,9 @@ module at.jku.ssw.coco {
 
 
 /// <reference path="Scanner.ts" />
+/// <reference path="Parsergen.ts" />
+/// <reference path="Tab.ts" />
+/// <reference path="Util.ts" />
 
 export class Parser {
 	public static _EOF : number = 0;

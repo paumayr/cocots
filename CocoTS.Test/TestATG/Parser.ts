@@ -141,116 +141,92 @@ public result : any;
 	}
 
 	
-	AddOp()  : {op : string; } 
-	 { 
-		var ret : { op : string;};
+	AddOp(ret : {op : string;}) {
 		if (this.la.kind == 3) {
 			this.Get();
-			ret = { op : "plus" }; 
+			ret.op = "plus"; 
 		} else if (this.la.kind == 4) {
 			this.Get();
-			ret = { op : "minus" }; 
+			ret.op = "minus"; 
 		} else this.SynErr(13);
-		return ret;
 	}
-	MulOp()  : {op : string; } 
-	 { 
-		var ret : { op : string;};
+	MulOp(ret : {op : string;}) {
 		if (this.la.kind == 5) {
 			this.Get();
-			ret = { op : "mult" }; 
+			ret.op = "mult"; 
 		} else if (this.la.kind == 6) {
 			this.Get();
-			ret = { op : "div" }; 
+			ret.op = "div"; 
 		} else this.SynErr(14);
-		return ret;
 	}
-	RelOp()  : {op : string; } 
-	 { 
-		var ret : { op : string;};
+	RelOp(ret : {op : string;}) {
 		if (this.la.kind == 9) {
 			this.Get();
-			ret = { op : "equals" }; 
+			ret.op = "equals"; 
 		} else if (this.la.kind == 7) {
 			this.Get();
-			ret = { op : "lesser" }; 
+			ret.op = "lesser"; 
 		} else if (this.la.kind == 8) {
 			this.Get();
-			ret = { op : "greater" }; 
+			ret.op = "greater"; 
 		} else this.SynErr(15);
-		return ret;
 	}
-	Expr()  : {expr : any; } 
-	 { 
-		var ret : { expr : any;};
-		var left = this.SimExpr();
-		ret = left; 
+	Expr(ret : {expr : any;}) {
+		this.SimExpr(ret);
 		if (this.la.kind == 7 || this.la.kind == 8 || this.la.kind == 9) {
-			var op = this.RelOp();
-			var right = this.SimExpr();
-			ret = { expr : { left : ret.expr, right : right.expr } };
+			var op = { op : "" }; var right = { expr : null }; 
+			this.RelOp(op);
+			this.SimExpr(right);
+			ret.expr = { left : ret.expr, op : op.op, right : right.expr }; 
 		}
-		return ret;
 	}
-	SimExpr()  : {expr : any; } 
-	 { 
-		var ret : { expr : any;};
-		var left = this.Term();
-		ret = left; 
+	SimExpr(ret : {expr : any;}) {
+		this.Term(ret);
 		while (this.la.kind == 3 || this.la.kind == 4) {
-			var op = this.AddOp();
-			var right = this.Term();
-			ret = { expr : { type : op.op, left : ret.expr, right : right.expr } }; 
+			var right = { expr : null }; var op = { op : "" }; 
+			this.AddOp(op);
+			this.Term(right);
+			ret.expr = { type : op.op, left : ret.expr, right : right.expr }; 
 		}
-		return ret;
 	}
-	Factor()  : {expr : any; } 
-	 { 
-		var ret : { expr : any;};
+	Factor(ret : {expr : any;}) {
 		if (this.la.kind == 1) {
-			var value = this.Ident();
-			ret = { expr : { type: "ident", ident : value.ident } }; 
+			var ident = { ident : "" }; 
+			this.Ident(ident);
+			ret.expr = { type: "ident", ident : ident.ident }; 
 		} else if (this.la.kind == 2) {
 			this.Get();
-			ret = { expr : { type: "number", number : parseFloat(this.t.val) } }; 
+			ret.expr = { type: "number", number : parseFloat(this.t.val) }; 
 		} else if (this.la.kind == 4) {
+			var factor = { expr : null }; 
 			this.Get();
-			var factor = this.Factor();
-			ret = { expr : { type: "negation", operand : factor.expr } }; 
+			this.Factor(factor);
+			ret.expr = { type: "negation", operand : factor.expr }; 
 		} else if (this.la.kind == 10) {
 			this.Get();
-			ret = { expr : { type: "boolean", value : true } }; 
+			ret.expr = { type: "boolean", value : true }; 
 		} else if (this.la.kind == 11) {
 			this.Get();
-			ret = { expr : { type: "boolean", value : false } }; 
+			ret.expr = { type: "boolean", value : false }; 
 		} else this.SynErr(16);
-		return ret;
 	}
-	Ident()  : {ident : string; } 
-	 { 
-		var ret : { ident : string;};
+	Ident(ret : {ident : string;}) {
 		this.Expect(1);
-		ret = { ident : this.t.val }; 
-		return ret;
+		ret.ident = this.t.val; 
 	}
-	Term()  : {expr : any; } 
-	 { 
-		var ret : { expr : any;};
-		var left = this.Factor();
-		ret = left; 
+	Term(ret : {expr : any;}) {
+		this.Factor(ret);
 		while (this.la.kind == 5 || this.la.kind == 6) {
-			var op = this.MulOp();
-			var right = this.Factor();
-			ret = { expr : { type: op.op, left : ret.expr, right : right.expr } }; 
+			var op = { op : "" }; var right = { expr : null }; 
+			this.MulOp(op);
+			this.Factor(right);
+			ret.expr = { type: op.op, left : ret.expr, right : right.expr }; 
 		}
-		return ret;
 	}
-	Test()  : { } 
-	 { 
-		var ret : { };
-		var test = this.Expr();
+	Test(ret : {}) {
+		var test = { expr : null }; 
+		this.Expr(test);
 		this.result = test.expr; 
-		return ret;
 	}
 
 
@@ -258,7 +234,7 @@ public result : any;
 		this.la = new Token();
 		this.la.val = "";		
 		this.Get();
-		this.Test();
+		this.Test(null);
 		this.Expect(0);
 
 	}

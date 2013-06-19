@@ -171,10 +171,8 @@ public class ParserGen {
 			switch (p.typ) {
 				case Node.nt: {
 					Indent(indent);
-					gen.Write("var ");
-					CopySourcePart(p.pos, 0);
-					gen.Write(" = ");
 					gen.Write("this." + p.sym.name + "(");
+					CopySourcePart(p.pos, 0);
 					gen.WriteLine(");");
 					break;
 				}
@@ -321,19 +319,11 @@ public class ParserGen {
 	void GenProductions() {
 		foreach (Symbol sym in tab.nonterminals) {
 			curSy = sym;
-			gen.Write("\t{0}() ", sym.name);
-			gen.Write(" : {");
+			gen.Write("\t{0}(ret : {{", sym.name);
 			CopySourcePart(sym.attrPos, 0);
-			gen.WriteLine(" } ");
-			Indent(1);
-			gen.WriteLine(" { ");
-			Indent(2);
-			gen.Write("var ret : { ");
-			CopySourcePart(sym.attrPos, 0);
-			gen.WriteLine("};");
+			gen.WriteLine("}) {");
 			CopySourcePart(sym.semPos, 2);
 			GenCode(sym.graph, 2, new BitArray(tab.terminals.Count));
-			gen.WriteLine("\t\treturn ret;");
 			gen.WriteLine("\t}"); 
 		}
 	}
@@ -379,7 +369,7 @@ public class ParserGen {
 		g.CopyFramePart("-->declarations"); CopySourcePart(tab.semDeclPos, 0);
 		g.CopyFramePart("-->pragmas"); GenCodePragmas();
 		g.CopyFramePart("-->productions"); GenProductions();
-		g.CopyFramePart("-->parseRoot"); gen.WriteLine("\t\tthis.{0}();", tab.gramSy.name); if (tab.checkEOF) gen.WriteLine("\t\tthis.Expect(0);");
+		g.CopyFramePart("-->parseRoot"); gen.WriteLine("\t\tthis.{0}(null);", tab.gramSy.name); if (tab.checkEOF) gen.WriteLine("\t\tthis.Expect(0);");
 		g.CopyFramePart("-->initialization"); InitSets();
 		g.CopyFramePart("-->errors"); gen.Write(err.ToString());
 		g.CopyFramePart(null);
