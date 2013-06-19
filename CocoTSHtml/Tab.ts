@@ -155,7 +155,7 @@ class CNode {	// node of list for finding circular productions
 	public left: Symbol;
 	public right: Symbol;
 
-	public CNode (l: Symbol, r: Symbol) {
+	constructor(l: Symbol, r: Symbol) {
 		this.left = l;
 		this.right = r;
 	}
@@ -512,11 +512,16 @@ export class Tab {
 		return (up)? ("-" +ptr): ptr;
 	}
 
+	static Format(formatString: string, o1: any): string{
+		// TODO
+		return null;
+	}
+
 	Pos(pos: Position): string  {
 		if (pos == null) {
 			return "     ";
 		} else {
-			return String.Format("{0,5}", pos.beg);
+			return Tab.Format("{0,5}", pos.beg);
 		}
 	}
 
@@ -643,7 +648,7 @@ export class Tab {
 
 /* Computes the first set for the graph rooted at p */
 	First0(p: Node, mark: BitArray): BitArray {
-		var fs = new BitArray(this.terminals.length);
+		var fs = new BitArray(this.terminals.length, false);
 		while (p != null && !mark[p.n]) {
 			mark[p.n]= true;
 			switch (p.typ) {
@@ -679,7 +684,7 @@ export class Tab {
 	}
 
 	public First(p: Node): BitArray  {
-		var fs = this.First0(p, new BitArray(this.nodes.length));
+		var fs = this.First0(p, new BitArray(this.nodes.length, false));
 		if (this.ddt[3]) {
 			this.trace.WriteLine();
 			if (p != null) {
@@ -696,7 +701,7 @@ export class Tab {
 	CompFirstSets() {
 		for(var i = 0; i < this.nonterminals.length; i++) {
 			var sym = this.nonterminals[i];
-			sym.first = new BitArray(this.terminals.length);
+			sym.first = new BitArray(this.terminals.length, false);
 			sym.firstReady = false;
 		}
 		for(var i = 0; i < this.nonterminals.length; i++) {
@@ -745,12 +750,12 @@ export class Tab {
 	CompFollowSets() {
 		for(var i = 0; i < this.nonterminals.length; i++) {
 			var sym = this.nonterminals[i];
-			sym.follow = new BitArray(this.terminals.length);
-			sym.nts = new BitArray(this.nonterminals.length);
+			sym.follow = new BitArray(this.terminals.length, false);
+			sym.nts = new BitArray(this.nonterminals.length, false);
 		}
 
-		this.gramSy.follow[eofSy.n] = true;
-		this.visited = new BitArray(this.nodes.length);
+		this.gramSy.follow[this.eofSy.n] = true;
+		this.visited = new BitArray(this.nodes.length, false);
 		for(var i = 0; i < this.nonterminals.length; i++) {
 			var sym = this.nonterminals[i];
 			this.curSy = sym;
@@ -760,7 +765,7 @@ export class Tab {
 		// add indirect successors to followers
 		for(var i = 0; i < this.nonterminals.length; i++) {
 			var sym = this.nonterminals[i];
-			this.visited = new BitArray(this.nonterminals.length);
+			this.visited = new BitArray(this.nonterminals.length, false);
 			this.curSy = sym;
 			this.Complete(sym);
 		}
@@ -802,13 +807,13 @@ export class Tab {
 					Sets.Subtract(a.set , this.First(p.next));
 				}
 			} else if (p.typ == Node.alt) {
-				var s1 = new BitArray(this.terminals.length);
+				var s1 = new BitArray(this.terminals.length, false);
 				var q = p;
 				while (q != null) {
 					this.FindAS(q.sub);
 					a = this.LeadingAny(q.sub);
 					if (a != null) {
-						Sets.Subtract(a.set , this.First(q.down).Or(s1));
+						Sets.Subtract(a.set, this.First(q.down).Or(s1));
 					} else {
 						s1.Or(this.First(q.sub));
 					}
@@ -845,7 +850,7 @@ export class Tab {
 
 	public Expected(p: Node, curSy: Symbol): BitArray {
 		var s = this.First(p);
-		if (this.DelGraph(p)) {
+		if (Tab.DelGraph(p)) {
 			s.Or(curSy.follow);
 		}
 		return s;
@@ -854,7 +859,7 @@ export class Tab {
 	// does not look behind resolvers; only called during LL(1) test and in CheckRes
 	public Expected0(p: Node, curSy: Symbol): BitArray {
 		if (p.typ == Node.rslv) {
-			return new BitArray(this.terminals.length);
+			return new BitArray(this.terminals.length, false);
 		} else {
 			return this.Expected(p, curSy);
 		}
@@ -865,7 +870,7 @@ export class Tab {
 			this.visited[p.n]= true;
 			if (p.typ == Node.sync) {
 				var s = this.Expected(p.next, this.curSy);
-				this.s[this.eofSy.n]= true;
+				s[this.eofSy.n]= true;
 				this.allSyncSets.Or(s);
 				p.set = s;
 			} else if (p.typ == Node.alt) {
@@ -879,9 +884,9 @@ export class Tab {
 	}
 
 	CompSyncSets() {
-		this.allSyncSets = new BitArray(this.terminals.length);
+		this.allSyncSets = new BitArray(this.terminals.length, false);
 		this.allSyncSets[this.eofSy.n]= true;
-		this.visited = new BitArray(this.nodes.length);
+		this.visited = new BitArray(this.nodes.length, false);
 		for(var i = 0; i < this.nonterminals.length; i++) {
 			var sym = this.nonterminals[i];
 			this.curSy = sym;
@@ -905,7 +910,7 @@ export class Tab {
 			changed = false;
 			for(var i = 0; i < this.nonterminals.length; i++) {
 				var sym = this.nonterminals[i];
-				if (!sym.deletable && sym.graph != null && this.DelGraph(sym.graph)) {
+				if (!sym.deletable && sym.graph != null && Tab.DelGraph(sym.graph)) {
 					sym.deletable = true; changed = true;
 				}
 			}
@@ -970,33 +975,33 @@ export class Tab {
 		return String.fromCharCode(parseInt(s, 16));
 	}
 
-	Char2Hex(ch: string): string {
+	Char2Hex(ch: number): string {
 		//w.WriteFormatted1("\\u{0:x4}", ch);
 		
-		return "\\u" + ch.charCodeAt(0).toString(16);
+		return "\\u" + ch.toString(16);
 	}
 
 	public Unescape(s: string): string {
 		/* replaces escape sequences in s by their Unicode values. */
-		var buf = new StringBuilder();
+		var buf = new StringBuilder("");
 		var i = 0;
 		while (i < s.length) {
 			if (s[i]== '\\') {
 				switch (s[i+1]) {
-					case '\\': buf.Append('\\'); i += 2; break;
-					case '\'': buf.Append('\''); i += 2; break;
-					case '\"': buf.Append('\"'); i += 2; break;
-					case 'r': buf.Append('\r'); i += 2; break;
-					case 'n': buf.Append('\n'); i += 2; break;
-					case 't': buf.Append('\t'); i += 2; break;
-					case '0': buf.Append('\0'); i += 2; break;
-					case 'a': buf.Append('\a'); i += 2; break;
-					case 'b': buf.Append('\b'); i += 2; break;
-					case 'f': buf.Append('\f'); i += 2; break;
-					case 'v': buf.Append('\v'); i += 2; break;
+					case '\\': buf.append('\\'); i += 2; break;
+					case '\'': buf.append('\''); i += 2; break;
+					case '\"': buf.append('\"'); i += 2; break;
+					case 'r': buf.append('\r'); i += 2; break;
+					case 'n': buf.append('\n'); i += 2; break;
+					case 't': buf.append('\t'); i += 2; break;
+					case '0': buf.append('\0'); i += 2; break;
+					case 'a': buf.append('\a'); i += 2; break;
+					case 'b': buf.append('\b'); i += 2; break;
+					case 'f': buf.append('\f'); i += 2; break;
+					case 'v': buf.append('\v'); i += 2; break;
 					case 'u': case 'x':
 						if (i +6 <= s.length) {
-							buf.Append(Hex2Char(s.substring(i + 2, 4)));
+							buf.append(this.Hex2Char(s.substring(i + 2, 4)));
 							i += 6;
 							break;
 						} else {
@@ -1010,33 +1015,36 @@ export class Tab {
 						break;
 				}
 			} else {
-				buf.Append(s[i]);
+				buf.append(s[i]);
 				i++;
 			}
 		}
 
-		return buf.ToString();
+		return buf.toString();
 	}
 
 	public Escape(s: string): string {
-		var buf = new StringBuilder();
+		var buf = new StringBuilder("");
 		for (var i = 0; i < s.length; i++) {
-			var ch = s[i];
+			var ch = s.charCodeAt(i);
 			switch(ch) {
-				case '\\': buf.Append("\\\\"); break;
-				case '\'': buf.Append("\\'"); break;
-				case '\"': buf.Append("\\\""); break;
-				case '\t': buf.Append("\\t"); break;
-				case '\r': buf.Append("\\r"); break;
-				case '\n': buf.Append("\\n"); break;
+				case '\\'.charCodeAt(0): buf.append("\\\\"); break;
+				case '\''.charCodeAt(0): buf.append("\\'"); break;
+				case '\"'.charCodeAt(0): buf.append("\\\""); break;
+				case '\t'.charCodeAt(0): buf.append("\\t"); break;
+				case '\r'.charCodeAt(0): buf.append("\\r"); break;
+				case '\n'.charCodeAt(0): buf.append("\\n"); break;
 				default:
-					if (ch < ' ' || ch > '\u007f') buf.Append(Char2Hex(ch));
-					else buf.Append(ch);
+					if (ch < ' '.charCodeAt(0) || ch > '\u007f'.charCodeAt(0)) {
+						buf.append(this.Char2Hex(ch));
+					} else {
+						buf.append(String.fromCharCode(ch));
+					}
 					break;
 			}
 		}
 
-		return buf.ToString();
+		return buf.toString();
 	}
 
 //---------------------------------------------------------------------
@@ -1107,7 +1115,9 @@ export class Tab {
 				});
 
 				if (!onLeftSide || !onRightSide) {
-					list.Remove(n); i--; changed = true;
+					list.splice(i, 1);
+					i--;
+					changed = true;
 				}
 			}
 		} while(changed);
@@ -1152,7 +1162,7 @@ export class Tab {
 		while (p != null) {
 			if (p.typ == Node.alt) {
 				var q = p;
-				s1 = new BitArray(this.terminals.length);
+				s1 = new BitArray(this.terminals.length, false);
 				while (q != null) { // for all alternatives
 					s2 = this.Expected0(q.sub, this.curSy);
 					this.CheckOverlap(s1, s2, 1);
@@ -1194,22 +1204,22 @@ export class Tab {
 //------------- check if resolvers are legal  --------------------
 
 	ResErr(p: Node, msg: string) {
-		this.errors.Warning(p.line, p.pos.col, msg);
+		this.errors.WarningPositioned(p.line, p.pos.col, msg);
 	}
 
 	CheckRes(p: Node, rslvAllowed: bool) {
 		while (p != null) {
 			switch (p.typ) {
 				case Node.alt:
-					var expected = new BitArray(this.terminals.length);
+					var expected = new BitArray(this.terminals.length, false);
 					for (var q = p; q != null; q = q.down) {
-						expected.Or(Expected0(q.sub, curSy));
+						expected.Or(this.Expected0(q.sub, this.curSy));
 					}
 
-					var soFar = new BitArray(terminals.Count);
+					var soFar = new BitArray(this.terminals.length, false);
 					for (var q = p; q != null; q = q.down) {
 						if (q.sub.typ == Node.rslv) {
-							var fs = this.Expected(q.sub.next, curSy);
+							var fs = this.Expected(q.sub.next, this.curSy);
 							if (Sets.Intersect(fs, soFar)) {
 								this.ResErr(q.sub, "Warning: Resolver will never be evaluated. " +
 								"Place it at previous conflicting alternative.");
@@ -1219,7 +1229,7 @@ export class Tab {
 								this.ResErr(q.sub, "Warning: Misplaced resolver: no LL(1) conflict.");
 							}
 						} else {
-							soFar.Or(Expected(q.sub, curSy));
+							soFar.Or(this.Expected(q.sub, this.curSy));
 						}
 
 						this.CheckRes(q.sub, true);
@@ -1228,8 +1238,8 @@ export class Tab {
 				case Node.iter:
 				case Node.opt:
 					if (p.sub.typ == Node.rslv) {
-						var fs = First(p.sub.next);
-						var fsNext = Expected(p.next, curSy);
+						var fs = this.First(p.sub.next);
+						var fsNext = this.Expected(p.next, this.curSy);
 						if (!Sets.Intersect(fs, fsNext)) {
 							this.ResErr(p.sub, "Warning: Misplaced resolver: no LL(1) conflict.");
 						}
@@ -1257,7 +1267,7 @@ export class Tab {
 		var outer = this;
 		this.nonterminals.forEach(function (sym) {
 			outer.curSy = sym;
-			outer.CheckRes(curSy.graph, false);
+			outer.CheckRes(this.curSy.graph, false);
 		});
 	}
 
@@ -1281,13 +1291,13 @@ export class Tab {
 
 	MarkReachedNts(p: Node) {
 		while (p != null) {
-			if (p.typ == Node.nt && !visited[p.sym.n]) { // new nt reached
-				visited[p.sym.n]= true;
-				MarkReachedNts(p.sym.graph);
+			if (p.typ == Node.nt && !this.visited[p.sym.n]) { // new nt reached
+				this.visited[p.sym.n]= true;
+				this.MarkReachedNts(p.sym.graph);
 			} else if (p.typ == Node.alt || p.typ == Node.iter || p.typ == Node.opt) {
-				MarkReachedNts(p.sub);
+				this.MarkReachedNts(p.sub);
 				if (p.typ == Node.alt) {
-					MarkReachedNts(p.down);
+					this.MarkReachedNts(p.down);
 				}
 			}
 
@@ -1300,14 +1310,14 @@ export class Tab {
 
 	public AllNtReached(): bool {
 		var ok = true;
-		visited = new BitArray(nonterminals.Count);
-		visited[gramSy.n]= true;
-		MarkReachedNts(gramSy.graph);
+		this.visited = new BitArray(this.nonterminals.length, false);
+		this.visited[this.gramSy.n]= true;
+		this.MarkReachedNts(this.gramSy.graph);
 		for(var i = 0; i < this.nonterminals.length; i++) {
 			var sym = this.nonterminals[i];
-			if (!visited[sym.n]) {
+			if (!this.visited[sym.n]) {
 				ok = false;
-				errors.Warning("  " +sym.name + " cannot be reached");
+				this.errors.Warning("  " +sym.name + " cannot be reached");
 			}
 		}
 		return ok;
@@ -1321,8 +1331,8 @@ export class Tab {
 				return false;
 			}
 
-			if (p.typ == Node.alt && !IsTerm(p.sub, mark)
-				&& (p.down == null || !IsTerm(p.down, mark))) {
+			if (p.typ == Node.alt && !this.IsTerm(p.sub, mark)
+				&& (p.down == null || !this.IsTerm(p.down, mark))) {
 				return false;
 			}
 
@@ -1338,13 +1348,13 @@ export class Tab {
 	public AllNtToTerm(): bool {
 		var changed: bool;
 		var ok = true;
-		var mark = new BitArray(nonterminals.Count);
+		var mark = new BitArray(this.nonterminals.length, false);
 // a nonterminal is marked if it can be derived to terminal symbols
 		do {
 			changed = false;
 			for(var i = 0; i < this.nonterminals.length; i++) {
 				var sym = this.nonterminals[i];
-				if (!mark[sym.n] && IsTerm(sym.graph, mark)) {
+				if (!mark[sym.n] && this.IsTerm(sym.graph, mark)) {
 					mark[sym.n] = true; changed = true;
 				}
 			}
@@ -1354,32 +1364,39 @@ export class Tab {
 			var sym = this.nonterminals[i];
 			if (!mark[sym.n]) {
 				ok = false;
-				errors.SemErr("  " + sym.name + " cannot be derived to terminals");
+				this.errors.SemErr("  " + sym.name + " cannot be derived to terminals");
 			}
 		}
 
 		return ok;
 	}
 
-//---------------------------------------------------------------------
-//  Cross reference list
-//---------------------------------------------------------------------
+	//---------------------------------------------------------------------
+	//  Cross reference list
+	//---------------------------------------------------------------------
 
 	public XRef() {
-		var xref = new SortedList(new SymbolComp());
+		var xref = {};
 		// collect lines where symbols have been defined
 		for(var i = 0; i < this.nonterminals.length; i++) {
 			var sym = this.nonterminals[i];
-			var list = xref[sym];
-			if (list == null) {list = new ArrayList(); xref[sym]= list; }
+			var list = xref[sym.name];
+			if (list == null) {
+				list = [];
+				xref[sym.name] = list;
+			}
 			list.Add(-sym.line);
 		}
 		// collect lines where symbols have been referenced
 		for(var i = 0; i < this.nodes.length; i++) {
 			var n = this.nodes[i];
 			if (n.typ == Node.t || n.typ == Node.wt || n.typ == Node.nt) {
-				var list = xref[n.sym];
-				if (list == null) {list = new ArrayList(); xref[n.sym]= list; }
+				var list = xref[n.sym.name];
+				if (list == null) {
+					list = [];
+					xref[n.sym.name] = list;
+				}
+
 				list.Add(n.line);
 			}
 		}
@@ -1388,30 +1405,33 @@ export class Tab {
 		this.trace.WriteLine();
 		this.trace.WriteLineText("Cross reference list:");
 		this.trace.WriteLineText("--------------------");
-		for(var i = 0; i < xref.Keys.length; i++) {
-			var sym = this.xref.Keys[i];
-			trace.Write("  {0,-12}", Name(sym.name));
-			var list = xref[sym];
+		for(var sym in xref) {
+			this.trace.WriteFormatted1("  {0,-12}", this.Name(sym.name));
+			var list = xref[sym.name];
 			var col: number = 14;
 			for(var j = 0; j < list.length; j++) {
 				var line = list[j];
 				if (col +5 > 80) {
-					trace.WriteLine();
-					for (col = 1; col <= 14; col++) trace.Write(" ");
+					this.trace.WriteLine();
+					for (col = 1; col <= 14; col++) {
+						this.trace.Write(" ");
+					}
 				}
-				trace.Write("{0,5}", line); col += 5;
+				this.trace.WriteFormatted1("{0,5}", line);
+				col += 5;
 			}
-			trace.WriteLine();
+			this.trace.WriteLine();
 		}
-		trace.WriteLine(); trace.WriteLine();
+		this.trace.WriteLine();
+		this.trace.WriteLine();
 	}
 
 	public SetDDT(s: string) {
 		s = s.toUpperCase();
 		for(var i = 0; i < s.length; i++) {
-			var ch = s[i];
-			if ('0' <= ch && ch <= '9') {
-				this.ddt[ch - '0'] = true;
+			var ch = s.charCodeAt(i);
+			if ('0'.charCodeAt(0) <= ch && ch <= '9'.charCodeAt(0)) {
+				this.ddt[ch - '0'.charCodeAt(0)] = true;
 			} else {
 				switch (ch) {
 					case 'A': this.ddt[0] = true; break; // trace automaton
@@ -1433,11 +1453,11 @@ export class Tab {
 		var name :string = option[0];
 		var value : string = option[1];
 		if ("$namespace" == name) {
-			if (nsName == null) {
-				nsName = value;
+			if (this.nsName == null) {
+				this.nsName = value;
 			}
-		} else if ("$checkEOF".Equals(name)) {
-			checkEOF = "true".Equals(value);
+		} else if ("$checkEOF" == name) {
+			this.checkEOF = "true" == value;
 		}
 	}
 } // end Tab

@@ -101,12 +101,13 @@ module at.jku.ssw.Coco {
 	}
 
 	export class BitArray {
-		constructor(size: number) {
+		constructor(size: number, value : bool) {
 			// TODO:
 		}
 
-		public Or(other: BitArray) {
+		public Or(other: BitArray) : BitArray {
 			// TODO:
+			return null;
 		}
 
 		get Count(): number {
@@ -122,8 +123,9 @@ module at.jku.ssw.Coco {
 			// TODO
 		}
 
-		And(other: BitArray) {
+		And(other: BitArray) : BitArray {
 			// TODO
+			return null;
 		}
 
 		Not(): BitArray {
@@ -144,7 +146,11 @@ module at.jku.ssw.Coco {
 		constructor(s: string) {
 			// TODO
 		}
-		public AppendNumber(n: number) {
+		public appendNumber(n: number) {
+			// TODO
+		}
+
+		public append(s: string) {
 			// TODO
 		}
 

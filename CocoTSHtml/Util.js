@@ -98,9 +98,10 @@ var at;
                 Coco.isLetter = isLetter;
 
                 var BitArray = (function () {
-                    function BitArray(size) {
+                    function BitArray(size, value) {
                     }
                     BitArray.prototype.Or = function (other) {
+                        return null;
                     };
 
                     Object.defineProperty(BitArray.prototype, "Count", {
@@ -118,6 +119,7 @@ var at;
                     };
 
                     BitArray.prototype.And = function (other) {
+                        return null;
                     };
 
                     BitArray.prototype.Not = function () {
@@ -144,7 +146,10 @@ var at;
                 var StringBuilder = (function () {
                     function StringBuilder(s) {
                     }
-                    StringBuilder.prototype.AppendNumber = function (n) {
+                    StringBuilder.prototype.appendNumber = function (n) {
+                    };
+
+                    StringBuilder.prototype.append = function (s) {
                     };
 
                     Object.defineProperty(StringBuilder.prototype, "length", {
