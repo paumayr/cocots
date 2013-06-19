@@ -4,93 +4,163 @@ var at;
         (function (ssw) {
             (function (Coco) {
                 var FileStream = (function () {
-                    function FileStream() { }
+                    function FileStream() {
+                    }
                     FileStream.prototype.ReadCharacter = function () {
-                        // TODO
                         return "\0";
                     };
                     return FileStream;
                 })();
-                Coco.FileStream = FileStream;                
+                Coco.FileStream = FileStream;
+
                 var StreamWriter = (function () {
-                    function StreamWriter() { }
+                    function StreamWriter() {
+                    }
                     StreamWriter.prototype.Write = function (s) {
                     };
+
                     StreamWriter.prototype.WriteLineText = function (s) {
-                        // TODO
-                                            };
+                    };
+
                     StreamWriter.prototype.WriteFormatted1 = function (format, o1) {
-                        // TODO
-                                            };
+                    };
+
+                    StreamWriter.prototype.WriteFormatted2 = function (format, o1, o2) {
+                    };
+
+                    StreamWriter.prototype.WriteFormatted3 = function (format, o1, o2, o3) {
+                    };
+
                     StreamWriter.prototype.WriteLineFormatted1 = function (format, o1) {
-                        // TODO
-                                            };
+                    };
+
                     StreamWriter.prototype.WriteLineFormatted2 = function (format, o1, o2) {
-                        // TODO
-                                            };
+                    };
+
                     StreamWriter.prototype.WriteLine = function () {
-                        // TODO
-                                            };
+                    };
+
                     StreamWriter.prototype.Close = function () {
-                        // TODO
-                                            };
+                    };
                     return StreamWriter;
                 })();
-                Coco.StreamWriter = StreamWriter;                
+                Coco.StreamWriter = StreamWriter;
+
                 var StringWriter = (function () {
-                    function StringWriter() { }
+                    function StringWriter() {
+                    }
+                    StringWriter.prototype.Write = function (s) {
+                    };
+
+                    StringWriter.prototype.WriteLine = function (s) {
+                    };
+
+                    StringWriter.prototype.ToString = function () {
+                        return null;
+                    };
                     return StringWriter;
                 })();
-                Coco.StringWriter = StringWriter;                
+                Coco.StringWriter = StringWriter;
+
                 var TextWriter = (function () {
-                    function TextWriter() { }
+                    function TextWriter() {
+                    }
                     TextWriter.prototype.WriteLine = function () {
-                        // TODO
-                                            };
+                    };
+
                     TextWriter.prototype.WriteLineText = function (s) {
-                        // TODO
-                                            };
+                    };
+
                     TextWriter.prototype.Write = function (s) {
-                        // TODO
-                                            };
+                    };
+
                     TextWriter.prototype.WriteFormatted1 = function (format, o1) {
-                        // TODO
-                                            };
+                    };
+
+                    TextWriter.prototype.WriteFormatted2 = function (format, o1, o2) {
+                    };
+
+                    TextWriter.prototype.WriteFormatted3 = function (format, o1, o2, o3) {
+                    };
+
+                    TextWriter.prototype.WriteLineFormatted1 = function (format, o1) {
+                    };
+
+                    TextWriter.prototype.WriteLineFormatted2 = function (format, o1, o2) {
+                    };
                     return TextWriter;
                 })();
-                Coco.TextWriter = TextWriter;                
+                Coco.TextWriter = TextWriter;
+
+                function isLetter(str) {
+                    return str.length === 1 && str.match(/[a-z]/i) != null;
+                }
+                Coco.isLetter = isLetter;
+
                 var BitArray = (function () {
                     function BitArray(size) {
-                        // TODO:
-                                            }
+                    }
                     BitArray.prototype.Or = function (other) {
-                        // TODO:
-                                            };
-                    return BitArray;
-                })();
-                Coco.BitArray = BitArray;                
-                var StringBuilder = (function () {
-                    function StringBuilder(s) {
-                        // TODO
-                                            }
-                    StringBuilder.prototype.AppendNumber = function (n) {
-                        // TODO
-                                            };
-                    Object.defineProperty(StringBuilder.prototype, "length", {
+                    };
+
+                    Object.defineProperty(BitArray.prototype, "Count", {
                         get: function () {
-                            // TODO
                             return 0;
                         },
                         enumerable: true,
                         configurable: true
                     });
+
+                    BitArray.prototype.Clone = function () {
+                        return null;
+                    };
+                    BitArray.prototype.SetAll = function (b) {
+                    };
+
+                    BitArray.prototype.And = function (other) {
+                    };
+
+                    BitArray.prototype.Not = function () {
+                        return this.Clone();
+                    };
+                    return BitArray;
+                })();
+                Coco.BitArray = BitArray;
+
+                var Hashtable = (function () {
+                    function Hashtable() {
+                    }
+                    Object.defineProperty(Hashtable.prototype, "length", {
+                        get: function () {
+                            return 0;
+                        },
+                        enumerable: true,
+                        configurable: true
+                    });
+                    return Hashtable;
+                })();
+                Coco.Hashtable = Hashtable;
+
+                var StringBuilder = (function () {
+                    function StringBuilder(s) {
+                    }
+                    StringBuilder.prototype.AppendNumber = function (n) {
+                    };
+
+                    Object.defineProperty(StringBuilder.prototype, "length", {
+                        get: function () {
+                            return 0;
+                        },
+                        enumerable: true,
+                        configurable: true
+                    });
+
                     StringBuilder.prototype.toString = function () {
-                        // TODO
                         return "";
                     };
                     return StringBuilder;
                 })();
-                Coco.StringBuilder = StringBuilder;                
+                Coco.StringBuilder = StringBuilder;
             })(ssw.Coco || (ssw.Coco = {}));
             var Coco = ssw.Coco;
         })(jku.ssw || (jku.ssw = {}));
@@ -98,4 +168,3 @@ var at;
     })(at.jku || (at.jku = {}));
     var jku = at.jku;
 })(at || (at = {}));
-//@ sourceMappingURL=Util.js.map

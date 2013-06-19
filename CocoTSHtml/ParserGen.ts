@@ -29,6 +29,8 @@ Coco/R itself) does not fall under the GNU General Public License.
 /// <reference path="Tab.ts" />
 /// <reference path="Util.ts" />
 /// <reference path="Parser.ts" />
+/// <reference path="Scanner.ts" />
+/// <reference path="DFA.ts" />
 
 module at.jku.ssw.Coco {
 
@@ -50,7 +52,7 @@ export class ParserGen {
 	fram: FileStream;  // parser frame file
 	gen: StreamWriter; // generated parser source file
 	err: StringWriter; // generated parser error messages
-	symSet = new ArrayList();
+	symSet :BitArray[] = [];
 
 	tab: Tab;          // other Coco objects
 	trace: TextWriter;
@@ -58,7 +60,7 @@ export class ParserGen {
 	buffer: Buffer;
 
 	Indent(n : number) {
-		for (var i = 1; i <= n; i++) gen.Write('\t');
+		for (var i = 1; i <= n; i++) this.gen.Write('\t');
 	}
 
 	Overlaps(s1: BitArray, s2: BitArray): bool {
@@ -77,11 +79,11 @@ export class ParserGen {
 		var s2: BitArray;
 		if (p.typ != Node.alt) return false;
 		var nAlts : number = 0;
-		s1 = new BitArray(tab.terminals.Count);
+		s1 = new BitArray(this.tab.terminals.length);
 		while (p != null) {
-			s2 = tab.Expected0(p.sub, curSy);
+			s2 = this.tab.Expected0(p.sub, this.curSy);
 			// must not optimize with switch statement, if there are ll1 warnings
-			if (Overlaps(s1, s2)) { return false; }
+			if (this.Overlaps(s1, s2)) { return false; }
 			s1.Or(s2);
 			++nAlts;
 			// must not optimize with switch-statement, if alt uses a resolver expression
@@ -96,79 +98,85 @@ export class ParserGen {
 		var ch: string;
 		var i : number;
 		if (pos != null) {
-			buffer.Pos = pos.beg; ch = buffer.Read();
-			if (tab.emitLines) {
-				gen.WriteLine();
-				gen.WriteLine("#line {0} \"{1}\"", pos.line, tab.srcName);
+			this.buffer.Pos = pos.beg;
+			ch = this.buffer.Read();
+			if (this.tab.emitLines) {
+				this.gen.WriteLine();
+				this.gen.WriteLineFormatted2("#line {0} \"{1}\"", pos.line, this.tab.srcName);
 			}
-			Indent(indent);
+			this.Indent(indent);
 			var done = false;
-			while (!done &&  buffer.Pos <= pos.end) {
-				while (ch == CR || ch == LF) {  // eol is either CR or CRLF or LF
-					gen.WriteLine(); Indent(indent);
-					if (ch == CR) ch = buffer.Read(); // skip CR
-					if (ch == LF) ch = buffer.Read(); // skip LF
+			while (!done &&  this.buffer.Pos <= pos.end) {
+				while (ch == ParserGen.CR || ch == ParserGen.LF) {  // eol is either CR or CRLF or LF
+					this.gen.WriteLine();
+					this.Indent(indent);
+					if (ch == ParserGen.CR) ch = this.buffer.Read(); // skip CR
+					if (ch == ParserGen.LF) ch = this.buffer.Read(); // skip LF
 					for (i = 1; i <= pos.col && (ch == ' ' || ch == '\t'); i++) {
 						// skip blanks at beginning of line
-						ch = buffer.Read();
+						ch = this.buffer.Read();
 					}
-					if (buffer.Pos > pos.end) { done = true; break; };
+					if (this.buffer.Pos > pos.end) { done = true; break; };
 				}
 
 				if (!done) {
-					gen.Write(ch);
-					ch = buffer.Read();
+					this.gen.Write(ch);
+					ch = this.buffer.Read();
 				}
 			}
 
-			if (indent > 0) gen.WriteLine();
+			if (indent > 0) this.gen.WriteLine();
 		}
 	}
 
 	GenErrorMsg(errTyp: number, sym: Symbol) {
-		errorNr++;
-		err.Write("\t\t\tcase " + errorNr + ": s = \"");
+		this.errorNr++;
+		this.err.Write("\t\t\tcase " + this.errorNr + ": s = \"");
 		switch (errTyp) {
-			case tErr:
-				if (sym.name[0] == '"') err.Write(tab.Escape(sym.name) + " expected");
-				else err.Write(sym.name + " expected");
+			case ParserGen.tErr:
+				if (sym.name[0] == '"') this.err.Write(this.tab.Escape(sym.name) + " expected");
+				else this.err.Write(sym.name + " expected");
 				break;
-			case altErr: err.Write("invalid " + sym.name); break;
-			case syncErr: err.Write("this symbol not expected in " + sym.name); break;
+			case ParserGen.altErr: this.err.Write("invalid " + sym.name); break;
+			case ParserGen.syncErr: this.err.Write("this symbol not expected in " + sym.name); break;
 		}
-		err.WriteLine("\"; break;");
+		this.err.WriteLine("\"; break;");
 	}
 
 	NewCondSet(s: BitArray) : number{
-		for (var i = 1; i < symSet.Count; i++) // skip symSet[0] (reserved for union of SYNC sets)
-		if (Sets.Equals(s, symSet[i])) return i;
-		symSet.Add(s.Clone());
-		return symSet.Count - 1;
+		for (var i = 1; i < this.symSet.length; i++) // skip symSet[0] (reserved for union of SYNC sets)
+		if (Sets.Equals(s, this.symSet[i])) return i;
+		this.symSet.push(s.Clone());
+		return this.symSet.length - 1;
 	}
 
 	GenCond(s: BitArray, p: Node) {
-		if (p.typ == Node.rslv) CopySourcePart(p.pos, 0);
+		if (p.typ == Node.rslv) this.CopySourcePart(p.pos, 0);
 		else {
 			var n = Sets.Elements(s);
-			if (n == 0) gen.Write("false"); // happens if an ANY set matches no symbol
-			else if (n <= maxTerm)
+			if (n == 0) {
+				this.gen.Write("false"); // happens if an ANY set matches no symbol
+			} else if (n <= ParserGen.maxTerm) {
 				for (var i = 0; i < this.tab.terminals.length; i++) {
 					var sym = this.tab.terminals[i];
 					if (s[sym.n]) {
-						gen.Write("this.la.kind == {0}", sym.n);
+						this.gen.WriteFormatted1("this.la.kind == {0}", sym.n);
 						--n;
-						if (n > 0) gen.Write(" || ");
+						if (n > 0) this.gen.Write(" || ");
 					}
 				}
-			else
-				gen.Write("this.StartOf({0})", NewCondSet(s));
+			} else {
+				this.gen.WriteFormatted1("this.StartOf({0})", this.NewCondSet(s));
+			}
 		}
 	}
 
 	PutCaseLabels(s: BitArray) {
 		for (var i = 0; i < this.tab.terminals.length; i++) {
 			var sym = this.tab.terminals[i];
-			if (s[sym.n]) gen.Write("case {0}: ", sym.n);
+			if (s[sym.n]) {
+				this.gen.WriteFormatted1("case {0}: ", sym.n);
+			}
 		}
 	}
 
@@ -179,240 +187,303 @@ export class ParserGen {
 		while (p != null) {
 			switch (p.typ) {
 				case Node.nt: {
-					Indent(indent);
-					gen.Write("var ");
-					CopySourcePart(p.pos, 0);
-					gen.Write(" = ");
-					gen.Write("this." + p.sym.name + "(");
-					gen.WriteLine(");");
+					this.Indent(indent);
+					this.gen.Write("var ");
+					this.CopySourcePart(p.pos, 0);
+					this.gen.Write(" = ");
+					this.gen.Write("this." + p.sym.name + "(");
+					this.gen.WriteLineText(");");
 					break;
 				}
 				case Node.t: {
-					Indent(indent);
+					this.Indent(indent);
 					// assert: if isChecked[p.sym.n] is true, then isChecked contains only p.sym.n
-					if (isChecked[p.sym.n]) gen.WriteLine("this.Get();");
-					else gen.WriteLine("this.Expect({0});", p.sym.n);
+					if (isChecked[p.sym.n]) {
+						this.gen.WriteLineText("this.Get();");
+					} else {
+						this.gen.WriteLineFormatted1("this.Expect({0});", p.sym.n);
+					}
 					break;
 				}
 				case Node.wt: {
-					Indent(indent);
-					s1 = tab.Expected(p.next, curSy);
-					s1.Or(tab.allSyncSets);
-					gen.WriteLine("this.ExpectWeak({0}, {1});", p.sym.n, NewCondSet(s1));
+					this.Indent(indent);
+					s1 = this.tab.Expected(p.next, this.curSy);
+					s1.Or(this.tab.allSyncSets);
+					this.gen.WriteLineFormatted2("this.ExpectWeak({0}, {1});", p.sym.n, this.NewCondSet(s1));
 					break;
 				}
 				case Node.any: {
-					Indent(indent);
+					this.Indent(indent);
 					var acc = Sets.Elements(p.set );
-					if (tab.terminals.Count == (acc + 1) || (acc > 0 && Sets.Equals(p.set , isChecked))) {
-						// either this ANY accepts any terminal (the + 1 = end of file), or exactly what's allowed here
-						gen.WriteLine("this.Get();");
+					if (this.tab.terminals.length == (acc + 1) || (acc > 0 && Sets.Equals(p.set , isChecked))) {
+					// either this ANY accepts any terminal (the + 1 = end of file), or exactly what's allowed here
+						this.gen.WriteLineText("this.Get();");
 					} else {
-						GenErrorMsg(altErr, curSy);
+						this.GenErrorMsg(ParserGen.altErr, this.curSy);
 						if (acc > 0) {
-							gen.Write("if ("); GenCond(p.set , p); gen.WriteLine(") this.Get(); else this.SynErr({0});", errorNr);
-						} else gen.WriteLine("this.SynErr({0}); // ANY node that matches no symbol", errorNr);
+							this.gen.Write("if (");
+							this.GenCond(p.set , p);
+							this.gen.WriteLineFormatted1(") this.Get(); else this.SynErr({0});", this.errorNr);
+						} else {
+							this.gen.WriteLineFormatted1("this.SynErr({0}); // ANY node that matches no symbol", this.errorNr);
+						}
 					}
 					break;
 				}
 				case Node.eps: break; // nothing
 				case Node.rslv: break; // nothing
 				case Node.sem: {
-					CopySourcePart(p.pos, indent);
+					this.CopySourcePart(p.pos, indent);
 					break;
 				}
 				case Node.sync: {
-					Indent(indent);
-					GenErrorMsg(syncErr, curSy);
-					s1 = (BitArray) p.set.Clone();
-					gen.Write("while (!("); GenCond(s1, p); gen.Write(")) {");
-					gen.Write("this.SynErr({0}); Get();", errorNr); gen.WriteLine("}");
+					this.Indent(indent);
+					this.GenErrorMsg(ParserGen.syncErr, this.curSy);
+					s1 = p.set.Clone();
+					this.gen.Write("while (!(");
+					this.GenCond(s1, p);
+					this.gen.Write(")) {");
+					this.gen.WriteFormatted1("this.SynErr({0}); Get(); ", this.errorNr);
+					this.gen.WriteLineText("}");
 					break;
 				}
 				case Node.alt: {
-					s1 = tab.First(p);
+					s1 = this.tab.First(p);
 					var equal = Sets.Equals(s1, isChecked);
-					var useSwitch = UseSwitch(p);
-					if (useSwitch) { Indent(indent); gen.WriteLine("switch (this.la.kind) {"); }
+					var useSwitch = this.UseSwitch(p);
+					if (useSwitch) {
+						this.Indent(indent);
+						this.gen.WriteLineText("switch (this.la.kind) {");
+					}
 					p2 = p;
 					while (p2 != null) {
-						s1 = tab.Expected(p2.sub, curSy);
-						Indent(indent);
+						s1 = this.tab.Expected(p2.sub, this.curSy);
+						this.Indent(indent);
 						if (useSwitch) {
-							PutCaseLabels(s1); gen.WriteLine("{");
+							this.PutCaseLabels(s1);
+							this.gen.WriteLineText("{");
 						} else if (p2 == p) {
-							gen.Write("if ("); GenCond(s1, p2.sub); gen.WriteLine(") {");
+							this.gen.Write("if (");
+							this.GenCond(s1, p2.sub);
+							this.gen.WriteLineText(") {");
 						} else if (p2.down == null && equal) {
-							gen.WriteLine("} else {");
+							this.gen.WriteLineText("} else {");
 						} else {
-							gen.Write("} else if ("); GenCond(s1, p2.sub); gen.WriteLine(") {");
+							this.gen.Write("} else if (");
+							this.GenCond(s1, p2.sub);
+							this.gen.WriteLineText(") {");
 						}
-						GenCode(p2.sub, indent + 1, s1);
+						this.GenCode(p2.sub, indent + 1, s1);
 						if (useSwitch) {
-							Indent(indent); gen.WriteLine("\tbreak;");
-							Indent(indent); gen.WriteLine("}");
+							this.Indent(indent);
+							this.gen.WriteLineText("\tbreak;");
+							this.Indent(indent);
+							this.gen.WriteLineText("}");
 						}
 						p2 = p2.down;
 					}
-					Indent(indent);
+					this.Indent(indent);
 					if (equal) {
-						gen.WriteLine("}");
+						this.gen.WriteLineText("}");
 					} else {
-						GenErrorMsg(altErr, curSy);
+						this.GenErrorMsg(ParserGen.altErr, this.curSy);
 						if (useSwitch) {
-							gen.WriteLine("default: this.SynErr({0}); break;", errorNr);
-							Indent(indent); gen.WriteLine("}");
+							this.gen.WriteLineFormatted1("default: this.SynErr({0}); break;", this.errorNr);
+							this.Indent(indent);
+							this.gen.WriteLineText("}");
 						} else {
-							gen.Write("} "); gen.WriteLine("else this.SynErr({0});", errorNr);
+							this.gen.Write("} ");
+							this.gen.WriteLineFormatted1("else this.SynErr({0});", this.errorNr);
 						}
 					}
 					break;
 				}
 				case Node.iter: {
-					Indent(indent);
+					this.Indent(indent);
 					p2 = p.sub;
-					gen.Write("while (");
+					this.gen.Write("while (");
 					if (p2.typ == Node.wt) {
-						s1 = tab.Expected(p2.next, curSy);
-						s2 = tab.Expected(p.next, curSy);
-						gen.Write("this.WeakSeparator({0},{1},{2}) ", p2.sym.n, NewCondSet(s1), NewCondSet(s2));
-						s1 = new BitArray(tab.terminals.Count);  // for inner structure
-						if (p2.up || p2.next == null) p2 = null; else p2 = p2.next;
+						s1 = this.tab.Expected(p2.next, this.curSy);
+						s2 = this.tab.Expected(p.next, this.curSy);
+						this.gen.WriteFormatted3("this.WeakSeparator({0},{1},{2}) ", p2.sym.n, this.NewCondSet(s1), this.NewCondSet(s2));
+						s1 = new BitArray(this.tab.terminals.length);  // for inner structure
+						if (p2.up || p2.next == null) {
+							p2 = null;
+						} else {
+							p2 = p2.next;
+						}
 					} else {
-						s1 = tab.First(p2);
-						GenCond(s1, p2);
+						s1 = this.tab.First(p2);
+						this.GenCond(s1, p2);
 					}
-					gen.WriteLine(") {");
-					GenCode(p2, indent + 1, s1);
-					Indent(indent); gen.WriteLine("}");
+					this.gen.WriteLineText(") {");
+					this.GenCode(p2, indent + 1, s1);
+					this.Indent(indent);
+					this.gen.WriteLineText("}");
 					break;
 				}
 				case Node.opt:
-					s1 = tab.First(p.sub);
-					Indent(indent);
-					gen.Write("if ("); GenCond(s1, p.sub); gen.WriteLine(") {");
-					GenCode(p.sub, indent + 1, s1);
-					Indent(indent); gen.WriteLine("}");
+					s1 = this.tab.First(p.sub);
+					this.Indent(indent);
+					this.gen.Write("if (");
+					this.GenCond(s1, p.sub);
+					this.gen.WriteLineText(") {");
+					this.GenCode(p.sub, indent + 1, s1);
+					this.Indent(indent);
+					this.gen.WriteLineText("}");
 					break;
 			}
-			if (p.typ != Node.eps && p.typ != Node.sem && p.typ != Node.sync)
+			if (p.typ != Node.eps && p.typ != Node.sem && p.typ != Node.sync) {
 				isChecked.SetAll(false);  // = new BitArray(tab.terminals.Count);
-			if (p.up) break;
+			}
+
+			if (p.up) {
+				break;
+			}
 			p = p.next;
 		}
 	}
 
 	GenTokens() {
-		foreach(Symbol sym in tab.terminals)
-		{
-			if (Char.IsLetter(sym.name[0])) {
+		for (var i = 0; i < this.tab.terminals.length; i++) {
+			var sym = this.tab.terminals[i];
+			if (isLetter(sym.name[0])) {
 				// TODO: use const from ES6
-				gen.WriteLine("\tpublic static _{0} : number = {1};", sym.name, sym.n);
+				this.gen.WriteLineFormatted2("\tpublic static _{0} : number = {1};", sym.name, sym.n);
 			}
 		}
 	}
 
 	GenPragmas() {
-		foreach(Symbol sym in tab.pragmas) {
-			// TODO: use const from ES6
-			gen.WriteLine("\tpublic static _{0} : number = {1};", sym.name, sym.n);
+		for (var i = 0; i < this.tab.pragmas.length; i++) {
+			var sym = this.tab.pragmas[i];
+			this.gen.WriteLineFormatted2("\tpublic static _{0} : number = {1};", sym.name, sym.n);
 		}
 	}
 
 	GenCodePragmas() {
-		foreach(Symbol sym in tab.pragmas) {
-			gen.WriteLine("\t\t\t\tif (this.la.kind == {0}) {{", sym.n);
-			CopySourcePart(sym.semPos, 4);
-			gen.WriteLine("\t\t\t\t}");
+		for (var i = 0; i < this.tab.pragmas.length; i++) {
+			var sym = this.tab.pragmas[i];
+			this.gen.WriteLineFormatted1("\t\t\t\tif (this.la.kind == {0}) {{", sym.n);
+			this.CopySourcePart(sym.semPos, 4);
+			this.gen.WriteLineText("\t\t\t\t}");
 		}
 	}
 
 	GenProductions() {
-		foreach(Symbol sym in tab.nonterminals) {
-			curSy = sym;
-			gen.Write("\t{0}() ", sym.name);
-			gen.Write(" : {");
-			CopySourcePart(sym.attrPos, 0);
-			gen.WriteLine(" } ");
-			Indent(1);
-			gen.WriteLine(" { ");
-			Indent(2);
-			gen.Write("var ret : { ");
-			CopySourcePart(sym.attrPos, 0);
-			gen.WriteLine("};");
-			CopySourcePart(sym.semPos, 2);
-			GenCode(sym.graph, 2, new BitArray(tab.terminals.Count));
-			gen.WriteLine("\t\treturn ret;");
-			gen.WriteLine("\t}");
+		for (var i = 0; i < this.tab.nonterminals.length; i++) {
+			var sym = this.tab.nonterminals[i];
+			this.curSy = sym;
+			this.gen.WriteFormatted1("\t{0}() ", sym.name);
+			this.gen.Write(" : {");
+			this.CopySourcePart(sym.attrPos, 0);
+			this.gen.WriteLineText(" } ");
+			this.Indent(1);
+			this.gen.WriteLineText(" { ");
+			this.Indent(2);
+			this.gen.Write("var ret : { ");
+			this.CopySourcePart(sym.attrPos, 0);
+			this.gen.WriteLineText("};");
+			this.CopySourcePart(sym.semPos, 2);
+			this.GenCode(sym.graph, 2, new BitArray(this.tab.terminals.length));
+			this.gen.WriteLineText("\t\treturn ret;");
+			this.gen.WriteLineText("\t}");
 		}
 	}
 
 	InitSets() {
-		for (var i = 0; i < symSet.Count; i++) {
-			var s = symSet[i];
-			gen.Write("\t\t[");
-			var j = 0;
-			foreach(Symbol sym in tab.terminals) {
-				if (s[sym.n]) gen.Write("true,"); else gen.Write("false,");
-				++j;
-				if (j % 4 == 0) gen.Write(" ");
+		for (var i = 0; i < this.symSet.length; i++) {
+			var s = this.symSet[i];
+			this.gen.Write("\t\t[");
+			for (var j = 0; j < this.tab.terminals.length; j++) {
+				var sym = this.tab.terminals[j];
+				if (s[sym.n]) {
+					this.gen.Write("true,");
+				} else {
+					this.gen.Write("false,");
+				}
+				if (j % 4 == 0) {
+					this.gen.Write(" ");
+				}
 			}
-			if (i == symSet.Count - 1) gen.WriteLine("false]"); else gen.WriteLine("false],");
+			if (i == this.symSet.length - 1) {
+				this.gen.WriteLineText("false]");
+			} else {
+				this.gen.WriteLineText("false],");
+			}
 		}
 	}
 
 	public WriteParser() {
-		var g = new Generator(tab);
-		var oldPos = buffer.Pos;  // Pos is modified by CopySourcePart
-		symSet.Add(tab.allSyncSets);
+		var g = new Generator(this.tab);
+		var oldPos = this.buffer.Pos;  // Pos is modified by CopySourcePart
+		this.symSet.push(this.tab.allSyncSets);
 
-		fram = g.OpenFrame("Parser.frame");
-		gen = g.OpenGen("Parser.ts");
-		err = new StringWriter();
-		foreach(Symbol sym in tab.terminals) GenErrorMsg(tErr, sym);
+		this.fram = g.OpenFrame("Parser.frame");
+		this.gen = g.OpenGen("Parser.ts");
+		this.err = new StringWriter();
+		for (var i = 0; i < this.tab.terminals.length; i++) {
+			var sym = this.tab.terminals[i];
+			this.GenErrorMsg(ParserGen.tErr, sym);
+		}
 
 		g.GenCopyright();
 		g.SkipFramePart("-->begin");
 
-		if (usingPos != null) { CopySourcePart(usingPos, 0); gen.WriteLine(); }
+		if (this.usingPos != null) {
+			this.CopySourcePart(this.usingPos, 0);
+			this.gen.WriteLine();
+		}
 		g.CopyFramePart("-->namespace");
 		/* AW open namespace, if it exists */
-		if (tab.nsName != null && tab.nsName.Length > 0) {
-			gen.WriteLine("module {0} {{", tab.nsName);
-			gen.WriteLine();
+		if (this.tab.nsName != null && this.tab.nsName.length > 0) {
+			this.gen.WriteLineFormatted1("module {0} {{", this.tab.nsName);
+			this.gen.WriteLine();
 		}
 		g.CopyFramePart("-->constants");
-		GenTokens(); /* ML 2002/09/07 write the token kinds */
-		gen.WriteLine("\tpublic static maxT : number = {0};", tab.terminals.Count - 1);
-		GenPragmas(); /* ML 2005/09/23 write the pragma kinds */
-		g.CopyFramePart("-->declarations"); CopySourcePart(tab.semDeclPos, 0);
-		g.CopyFramePart("-->pragmas"); GenCodePragmas();
-		g.CopyFramePart("-->productions"); GenProductions();
-		g.CopyFramePart("-->parseRoot"); gen.WriteLine("\t\tthis.{0}();", tab.gramSy.name); if (tab.checkEOF) gen.WriteLine("\t\tthis.Expect(0);");
-		g.CopyFramePart("-->initialization"); InitSets();
-		g.CopyFramePart("-->errors"); gen.Write(err.ToString());
+		this.GenTokens(); /* ML 2002/09/07 write the token kinds */
+		this.gen.WriteLineFormatted1("\tpublic static maxT : number = {0};", this.tab.terminals.length - 1);
+		this.GenPragmas(); /* ML 2005/09/23 write the pragma kinds */
+		g.CopyFramePart("-->declarations");
+		this.CopySourcePart(this.tab.semDeclPos, 0);
+		g.CopyFramePart("-->pragmas");
+		this.GenCodePragmas();
+		g.CopyFramePart("-->productions");
+		this.GenProductions();
+		g.CopyFramePart("-->parseRoot");
+		this.gen.WriteLineFormatted1("\t\tthis.{0}();", this.tab.gramSy.name);
+		if (this.tab.checkEOF) {
+			this.gen.WriteLineText("\t\tthis.Expect(0);");
+		}
+		g.CopyFramePart("-->initialization");
+		this.InitSets();
+		g.CopyFramePart("-->errors");
+		this.gen.Write(this.err.ToString());
 		g.CopyFramePart(null);
 		/* AW 2002-12-20 close namespace, if it exists */
-		if (tab.nsName != null && tab.nsName.Length > 0) gen.Write("}");
-		gen.Close();
-		buffer.Pos = oldPos;
+		if (this.tab.nsName != null && this.tab.nsName.length > 0) {
+			this.gen.Write("}");
+		}
+
+		this.gen.Close();
+		this.buffer.Pos = oldPos;
 	}
 
 	public WriteStatistics() {
-		trace.WriteLine();
-		trace.WriteLine("{0} terminals", tab.terminals.Count);
-		trace.WriteLine("{0} symbols", tab.terminals.Count + tab.pragmas.Count + tab.nonterminals.Count);
-		trace.WriteLine("{0} nodes", tab.nodes.Count);
-		trace.WriteLine("{0} sets", symSet.Count);
+		this.trace.WriteLine();
+		this.trace.WriteLineFormatted1("{0} terminals", this.tab.terminals.length);
+		this.trace.WriteLineFormatted1("{0} symbols", this.tab.terminals.length + this.tab.pragmas.length + this.tab.nonterminals.length);
+		this.trace.WriteLineFormatted1("{0} nodes", this.tab.nodes.length);
+		this.trace.WriteLineFormatted1("{0} sets", this.symSet.length);
 	}
 
 	constructor (parser: Parser) {
-		tab = parser.tab;
-		errors = parser.errors;
-		trace = parser.trace;
-		buffer = parser.scanner.buffer;
-		errorNr = -1;
-		usingPos = null;
+		this.tab = parser.tab;
+		this.errors = parser.errors;
+		this.trace = parser.trace;
+		this.buffer = parser.scanner.buffer;
+		this.errorNr = -1;
+		this.usingPos = null;
 	}
 } // end ParserGen
 

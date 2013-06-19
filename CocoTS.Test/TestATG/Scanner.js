@@ -27,11 +27,12 @@ Coco/R itself) does not fall under the GNU General Public License.
 var testlanguage;
 (function (testlanguage) {
     var Token = (function () {
-        function Token() { }
+        function Token() {
+        }
         return Token;
     })();
-    testlanguage.Token = Token;    
-    // ML 2005-03-11 Tokens are kept in linked list
+    testlanguage.Token = Token;
+
     //-----------------------------------------------------------------------------------
     // Buffer
     //-----------------------------------------------------------------------------------
@@ -41,25 +42,27 @@ var testlanguage;
             this.fileLen = s.length;
             this.pos = 0;
         }
-        Buffer.EOF = "\0";
         Buffer.prototype.Read = function () {
-            if(this.pos < this.fileLen) {
+            if (this.pos < this.fileLen) {
                 return this.buf[this.pos++];
             } else {
                 return Buffer.EOF;
             }
         };
+
         Buffer.prototype.Peek = function () {
             var curPos = this.Pos;
             var ch = this.Read();
             this.Pos = curPos;
             return ch;
         };
-        Buffer.prototype.GetString = // beg .. begin, zero-based, inclusive, in byte
+
+        // beg .. begin, zero-based, inclusive, in byte
         // end .. end, zero-based, exclusive, in byte
-        function (beg, end) {
+        Buffer.prototype.GetString = function (beg, end) {
             return this.buf.substring(beg, end);
         };
+
         Object.defineProperty(Buffer.prototype, "Pos", {
             get: function () {
                 return this.pos;
@@ -70,45 +73,38 @@ var testlanguage;
             enumerable: true,
             configurable: true
         });
+        Buffer.EOF = "\0";
         return Buffer;
     })();
-    testlanguage.Buffer = Buffer;    
+    testlanguage.Buffer = Buffer;
+
     //-----------------------------------------------------------------------------------
     // Scanner
     //-----------------------------------------------------------------------------------
     var Scanner = (function () {
         function Scanner(s) {
-            // current peek token
             this.tval = [];
             this.buffer = new Buffer(s);
             this.Init();
         }
-        Scanner.EOL = "\n";
-        Scanner.eofSym = 0;
-        Scanner.maxT = 12;
-        Scanner.noSym = 12;
-        Scanner.InitStartTab = // text of current token // TODO use TS 0.9 generics
-        function InitStartTab() {
-            Scanner.start = {
-            };
-            for(var i = 65; i <= 90; ++i) {
-                Scanner.start[String.fromCharCode(i)] = 1;
-            }
-            for(var i = 97; i <= 122; ++i) {
-                Scanner.start[String.fromCharCode(i)] = 1;
-            }
-            for(var i = 48; i <= 57; ++i) {
-                Scanner.start[String.fromCharCode(i)] = 2;
-            }
-            Scanner.start['+'] = 3;
-            Scanner.start['-'] = 4;
-            Scanner.start['*'] = 5;
-            Scanner.start['/'] = 6;
-            Scanner.start['<'] = 7;
-            Scanner.start['>'] = 8;
-            Scanner.start['='] = 9;
-            Scanner.start[Buffer.EOF] = -1;
+        Scanner.InitStartTab = function () {
+            start = {};
+            for (var i = 65; i <= 90; ++i)
+                start[String.fromCharCode(i)] = 1;
+            for (var i = 97; i <= 122; ++i)
+                start[String.fromCharCode(i)] = 1;
+            for (var i = 48; i <= 57; ++i)
+                start[String.fromCharCode(i)] = 2;
+            start['+'] = 3;
+            start['-'] = 4;
+            start['*'] = 5;
+            start['/'] = 6;
+            start['<'] = 7;
+            start['>'] = 8;
+            start['='] = 9;
+            start[Buffer.EOF] = -1;
         };
+
         Scanner.prototype.Init = function () {
             this.pos = -1;
             this.line = 1;
@@ -116,36 +112,40 @@ var testlanguage;
             this.charPos = -1;
             this.oldEols = 0;
             this.NextCh();
-            this.pt = this.tokens = new Token()// first token is a dummy
-            ;
+            this.pt = this.tokens = new Token();
         };
+
         Scanner.prototype.NextCh = function () {
-            if(this.oldEols > 0) {
+            if (this.oldEols > 0) {
                 this.ch = Scanner.EOL;
                 this.oldEols--;
             } else {
                 this.pos = this.buffer.Pos;
+
                 // buffer reads unicode chars, if UTF8 has been detected
                 this.ch = this.buffer.Read();
                 this.col++;
                 this.charPos++;
-                // replace isolated '\r' by '\n' in order to make
-                // eol handling uniform across Windows, Unix and Mac
-                if(this.ch == "\r" && this.buffer.Peek() != "\n") {
+
+                if (this.ch == "\r" && this.buffer.Peek() != "\n") {
                     this.ch = Scanner.EOL;
                 }
-                if(this.ch == Scanner.EOL) {
+
+                if (this.ch == Scanner.EOL) {
                     this.line++;
                     this.col = 0;
                 }
             }
         };
+
         Scanner.prototype.AddCh = function () {
-            if(this.ch != Buffer.EOF) {
+            if (this.ch != Buffer.EOF) {
                 this.tval.push(this.ch);
+
                 this.NextCh();
             }
         };
+
         Scanner.prototype.Comment0 = function () {
             var level = 1;
             var pos0 = this.pos;
@@ -153,22 +153,20 @@ var testlanguage;
             var col0 = this.col;
             var charPos0 = this.charPos;
             this.NextCh();
-            if(this.ch == '/') {
+            if (this.ch == '/') {
                 this.NextCh();
-                for(; ; ) {
-                    if(this.ch == "\u0010") {
+                for (; ; ) {
+                    if (this.ch == "\u0010") {
                         level--;
-                        if(level == 0) {
+                        if (level == 0) {
                             this.oldEols = this.line - line0;
                             this.NextCh();
                             return true;
                         }
                         this.NextCh();
-                    } else if(this.ch == Buffer.EOF) {
-                        return false;
-                    } else {
+                    } else if (this.ch == Buffer.EOF)
+                        return false; else
                         this.NextCh();
-                    }
                 }
             } else {
                 this.buffer.Pos = pos0;
@@ -179,6 +177,7 @@ var testlanguage;
             }
             return false;
         };
+
         Scanner.prototype.Comment1 = function () {
             var level = 1;
             var pos0 = this.pos;
@@ -186,31 +185,29 @@ var testlanguage;
             var col0 = this.col;
             var charPos0 = this.charPos;
             this.NextCh();
-            if(this.ch == '*') {
+            if (this.ch == '*') {
                 this.NextCh();
-                for(; ; ) {
-                    if(this.ch == '*') {
+                for (; ; ) {
+                    if (this.ch == '*') {
                         this.NextCh();
-                        if(this.ch == '/') {
+                        if (this.ch == '/') {
                             level--;
-                            if(level == 0) {
+                            if (level == 0) {
                                 this.oldEols = this.line - line0;
                                 this.NextCh();
                                 return true;
                             }
                             this.NextCh();
                         }
-                    } else if(this.ch == '/') {
+                    } else if (this.ch == '/') {
                         this.NextCh();
-                        if(this.ch == '*') {
+                        if (this.ch == '*') {
                             level++;
                             this.NextCh();
                         }
-                    } else if(this.ch == Buffer.EOF) {
-                        return false;
-                    } else {
+                    } else if (this.ch == Buffer.EOF)
+                        return false; else
                         this.NextCh();
-                    }
                 }
             } else {
                 this.buffer.Pos = pos0;
@@ -221,8 +218,9 @@ var testlanguage;
             }
             return false;
         };
+
         Scanner.prototype.CheckLiteral = function () {
-            switch(this.t.val) {
+            switch (this.t.val) {
                 case "true":
                     this.t.kind = 10;
                     break;
@@ -233,13 +231,12 @@ var testlanguage;
                     break;
             }
         };
+
         Scanner.prototype.NextToken = function () {
-            while(this.ch == " " || this.ch >= "\u0009" && this.ch <= "\u0010" || this.ch == "\u0013") {
+            while (this.ch == " " || this.ch >= "\u0009" && this.ch <= "\u0010" || this.ch == "\u0013")
                 this.NextCh();
-            }
-            if(this.ch == '/' && this.Comment0() || this.ch == '/' && this.Comment1()) {
+            if (this.ch == '/' && this.Comment0() || this.ch == '/' && this.Comment1())
                 return this.NextToken();
-            }
             var recKind = Scanner.noSym;
             var recEnd = this.pos;
             this.t = new Token();
@@ -248,35 +245,35 @@ var testlanguage;
             this.t.line = this.line;
             this.t.charPos = this.charPos;
             var state;
-            if(Scanner.start[this.ch] != undefined) {
+            if (Scanner.start[this.ch] != undefined) {
                 state = Scanner.start[this.ch];
             } else {
                 state = 0;
             }
+
             this.tval = [];
             this.AddCh();
+
             var done = false;
-            while(!done) {
+            while (!done) {
                 done = true;
-                switch(state) {
+                switch (state) {
                     case -1: {
                         this.t.kind = Scanner.eofSym;
                         break;
-                    }// NextCh already done
-                    
+                    }
                     case 0: {
-                        if(recKind != Scanner.noSym) {
+                        if (recKind != Scanner.noSym) {
                             this.tval = this.tval.slice(0, recEnd);
                             this.SetScannerBehindT();
                         }
                         this.t.kind = recKind;
                         break;
-                    }// NextCh already done
-                    
+                    }
                     case 1:
                         recEnd = this.pos;
                         recKind = 1;
-                        if(this.ch >= '0' && this.ch <= '9' || this.ch >= 'A' && this.ch <= 'Z' || this.ch >= 'a' && this.ch <= 'z') {
+                        if (this.ch >= '0' && this.ch <= '9' || this.ch >= 'A' && this.ch <= 'Z' || this.ch >= 'a' && this.ch <= 'z') {
                             this.AddCh();
                             state = 1;
                             done = false;
@@ -290,7 +287,7 @@ var testlanguage;
                     case 2:
                         recEnd = this.pos;
                         recKind = 2;
-                        if(this.ch >= '0' && this.ch <= '9') {
+                        if (this.ch >= '0' && this.ch <= '9') {
                             this.AddCh();
                             state = 2;
                             done = false;
@@ -324,7 +321,7 @@ var testlanguage;
                         break;
                     }
                     case 9:
-                        if(this.ch == '=') {
+                        if (this.ch == '=') {
                             this.AddCh();
                             state = 10;
                             done = false;
@@ -340,47 +337,54 @@ var testlanguage;
                     }
                 }
             }
+
             this.t.val = this.tval.join("");
             return this.t;
         };
+
         Scanner.prototype.SetScannerBehindT = function () {
             this.buffer.Pos = this.t.pos;
             this.NextCh();
             this.line = this.t.line;
             this.col = this.t.col;
             this.charPos = this.t.charPos;
-            for(var i = 0; i < this.tval.length; i++) {
+            for (var i = 0; i < this.tval.length; i++)
                 this.NextCh();
-            }
         };
-        Scanner.prototype.Scan = // get the next token (possibly a token already seen during peeking)
-        function () {
-            if(this.tokens.next == null) {
+
+        // get the next token (possibly a token already seen during peeking)
+        Scanner.prototype.Scan = function () {
+            if (this.tokens.next == null) {
                 return this.NextToken();
             } else {
                 this.pt = this.tokens = this.tokens.next;
                 return this.tokens;
             }
         };
-        Scanner.prototype.Peek = // peek for the next token, ignore pragmas
-        function () {
+
+        // peek for the next token, ignore pragmas
+        Scanner.prototype.Peek = function () {
             do {
-                if(this.pt.next == null) {
+                if (this.pt.next == null) {
                     this.pt.next = this.NextToken();
                 }
                 this.pt = this.pt.next;
-            }while(this.pt.kind > Scanner.maxT);// skip pragmas
-            
+            } while(this.pt.kind > Scanner.maxT);
+
             return this.pt;
         };
-        Scanner.prototype.ResetPeek = // make sure that peeking starts at the current scan position
-        function () {
+
+        // make sure that peeking starts at the current scan position
+        Scanner.prototype.ResetPeek = function () {
             this.pt = this.tokens;
         };
+        Scanner.EOL = "\n";
+        Scanner.eofSym = 0;
+        Scanner.maxT = 12;
+        Scanner.noSym = 12;
         return Scanner;
     })();
-    testlanguage.Scanner = Scanner;    // end Scanner
-    
+    testlanguage.Scanner = Scanner;
     Scanner.InitStartTab();
 })(testlanguage || (testlanguage = {}));
 //@ sourceMappingURL=Scanner.js.map

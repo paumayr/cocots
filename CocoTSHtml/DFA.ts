@@ -28,6 +28,7 @@ Coco/R itself) does not fall under the GNU General Public License.
 
 /// <reference path="Tab.ts" />
 /// <reference path="Util.ts" />
+/// <reference path="Scanner.ts" />
 
 module at.jku.ssw.Coco {
 
@@ -604,7 +605,7 @@ export class DFA {
 
 				this.Step(from, p.sub, stepped);
 				if (p.state != from) {
-					this.Step(p.state, p, new BitArray(this.tab.nodes.Count));
+					this.Step(p.state, p, new BitArray(this.tab.nodes.length));
 				}
 				break;
 			}
@@ -663,7 +664,7 @@ export class DFA {
 		if (p == null || marked[p.n]) return;
 		marked[p.n] = true;
 		if (start) {
-			this.Step(p.state, p, new BitArray(this.tab.nodes.Count)); // start of group of equally numbered nodes
+			this.Step(p.state, p, new BitArray(this.tab.nodes.length)); // start of group of equally numbered nodes
 		}
 
 		switch (p.typ) {
@@ -697,9 +698,9 @@ export class DFA {
 		}
 
 		this.NumberNodes(p, this.firstState, true);
-		this.FindTrans(p, true, new BitArray(this.tab.nodes.Count));
+		this.FindTrans(p, true, new BitArray(this.tab.nodes.length));
 		if (p.typ == Node.iter) {
-			this.Step(this.firstState, p, new BitArray(this.tab.nodes.Count));
+			this.Step(this.firstState, p, new BitArray(this.tab.nodes.length));
 		}
 	}
 
@@ -1071,13 +1072,9 @@ export class DFA {
 		this.gen.WriteLineText("\t}");
 	}
 
-	private static isLetter(str : string) : bool {
-		return str.length === 1 && str.match(/[a-z]/i) != null;
-	}
-
 	SymName(sym: Symbol): string {
 
-		if (DFA.isLetter(sym.name[0])) { // real name value is stored in Tab.literals
+		if (isLetter(sym.name[0])) { // real name value is stored in Tab.literals
 			for (var i = 0; i < this.tab.literals.length; i++) {
 				var e = this.tab.literals[i];
 				if (e.Value == sym) {

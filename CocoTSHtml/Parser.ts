@@ -110,8 +110,9 @@ get id() : number { return 0; }
 				this.errDist++; 
 				break; 
 			}
-				if (this.la.kind == 42) {
-				tab.SetDDT(la.val); 
+
+			if (this.la.kind == 42) {
+				this.tab.SetDDT(la.val); 
 				}
 				if (this.la.kind == 43) {
 				tab.SetOption(la.val); 

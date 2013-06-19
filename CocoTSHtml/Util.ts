@@ -20,6 +20,14 @@ module at.jku.ssw.Coco {
 			// TODO
 		}
 
+		public WriteFormatted2(format: string, o1: any, o2: any) {
+			// TODO
+		}
+
+		public WriteFormatted3(format: string, o1: any, o2: any, o3: any) {
+			// TODO
+		}
+
 		public WriteLineFormatted1(format: string, o1: any) {
 			// TODO
 		}
@@ -39,6 +47,18 @@ module at.jku.ssw.Coco {
 	}
 
 	export class StringWriter {
+		public Write(s: string) {
+			// TODO:
+		}
+
+		public WriteLine(s: string) {
+			// TODO:
+		}
+
+		public ToString(): string {
+			// TODO
+			return null;
+		}
 	}
 
 	export class TextWriter {
@@ -57,6 +77,27 @@ module at.jku.ssw.Coco {
 		public WriteFormatted1(format: string, o1: any) {
 			// TODO
 		}
+
+		public WriteFormatted2(format: string, o1: any, o2 : any) {
+			// TODO
+		}
+
+		public WriteFormatted3(format: string, o1: any, o2: any, o3: any) {
+			// TODO
+		}
+
+		public WriteLineFormatted1(format: string, o1: any) {
+			// TODO
+		}
+		
+		public WriteLineFormatted2(format: string, o1: any, o2: any) {
+			// TODO
+		}
+
+	}
+
+	export function isLetter(str: string): bool {
+		return str.length === 1 && str.match(/[a-z]/i) != null;
 	}
 
 	export class BitArray {
@@ -66,6 +107,36 @@ module at.jku.ssw.Coco {
 
 		public Or(other: BitArray) {
 			// TODO:
+		}
+
+		get Count(): number {
+			// TODO:
+			return 0;
+		}
+
+		Clone(): BitArray {
+			// TODO
+			return null;
+		}
+		SetAll(b: bool) {
+			// TODO
+		}
+
+		And(other: BitArray) {
+			// TODO
+		}
+
+		Not(): BitArray {
+			// TODO
+			return this.Clone();
+		}
+	}
+
+	export class Hashtable {
+
+		public get length() : number {
+			// TODO
+			return 0;
 		}
 	}
 
