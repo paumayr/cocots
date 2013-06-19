@@ -88,21 +88,21 @@ var testlanguage;
             this.Init();
         }
         Scanner.InitStartTab = function () {
-            start = {};
+            Scanner.start = {};
             for (var i = 65; i <= 90; ++i)
-                start[String.fromCharCode(i)] = 1;
+                Scanner.start[String.fromCharCode(i)] = 1;
             for (var i = 97; i <= 122; ++i)
-                start[String.fromCharCode(i)] = 1;
+                Scanner.start[String.fromCharCode(i)] = 1;
             for (var i = 48; i <= 57; ++i)
-                start[String.fromCharCode(i)] = 2;
-            start['+'] = 3;
-            start['-'] = 4;
-            start['*'] = 5;
-            start['/'] = 6;
-            start['<'] = 7;
-            start['>'] = 8;
-            start['='] = 9;
-            start[Buffer.EOF] = -1;
+                Scanner.start[String.fromCharCode(i)] = 2;
+            Scanner.start['+'] = 3;
+            Scanner.start['-'] = 4;
+            Scanner.start['*'] = 5;
+            Scanner.start['/'] = 6;
+            Scanner.start['<'] = 7;
+            Scanner.start['>'] = 8;
+            Scanner.start['='] = 9;
+            Scanner.start[Buffer.EOF] = -1;
         };
 
         Scanner.prototype.Init = function () {

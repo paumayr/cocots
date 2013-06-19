@@ -107,18 +107,18 @@ export class Scanner {
 	tval = []; // text of current token // TODO use TS 0.9 generics
 	
 	static InitStartTab() {
-		start = {};
-		for (var i : number = 65; i <= 90; ++i) start[String.fromCharCode(i)] = 1;
-		for (var i : number = 97; i <= 122; ++i) start[String.fromCharCode(i)] = 1;
-		for (var i : number = 48; i <= 57; ++i) start[String.fromCharCode(i)] = 2;
-		start['+'] = 3; 
-		start['-'] = 4; 
-		start['*'] = 5; 
-		start['/'] = 6; 
-		start['<'] = 7; 
-		start['>'] = 8; 
-		start['='] = 9; 
-		start[Buffer.EOF] = -1;
+		Scanner.start = {};
+		for (var i : number = 65; i <= 90; ++i) Scanner.start[String.fromCharCode(i)] = 1;
+		for (var i : number = 97; i <= 122; ++i) Scanner.start[String.fromCharCode(i)] = 1;
+		for (var i : number = 48; i <= 57; ++i) Scanner.start[String.fromCharCode(i)] = 2;
+		Scanner.start['+'] = 3; 
+		Scanner.start['-'] = 4; 
+		Scanner.start['*'] = 5; 
+		Scanner.start['/'] = 6; 
+		Scanner.start['<'] = 7; 
+		Scanner.start['>'] = 8; 
+		Scanner.start['='] = 9; 
+		Scanner.start[Buffer.EOF] = -1;
 
 	}
 	

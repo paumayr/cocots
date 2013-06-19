@@ -26,14 +26,11 @@ Coco/R itself) does not fall under the GNU General Public License.
 -----------------------------------------------------------------------*/
 
 
-module at.jku.ssw.Coco {
+module at.jku.ssw.coco {
 
 
 
 /// <reference path="Scanner.ts" />
-/// <reference path="Util.ts" />
-/// <reference path="DFA.ts" />
-/// <reference path="ParserGen.ts" />
 
 export class Parser {
 	public static _EOF : number = 0;
@@ -110,9 +107,8 @@ get id() : number { return 0; }
 				this.errDist++; 
 				break; 
 			}
-
-			if (this.la.kind == 42) {
-				this.tab.SetDDT(la.val); 
+				if (this.la.kind == 42) {
+				tab.SetDDT(la.val); 
 				}
 				if (this.la.kind == 43) {
 				tab.SetOption(la.val); 

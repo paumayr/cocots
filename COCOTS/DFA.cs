@@ -978,20 +978,20 @@ public class DFA {
 				string c = Char.ConvertFromUtf32(action.sym);
 				if (c == "'")
 				{
-					gen.WriteLine("\t\tstart[\"" + c + "\"] = " + targetState + "; ");
+					gen.WriteLine("\t\tScanner.start[\"" + c + "\"] = " + targetState + "; ");
 				}
 				else
 				{
-					gen.WriteLine("\t\tstart['" + c + "'] = " + targetState + "; ");
+					gen.WriteLine("\t\tScanner.start['" + c + "'] = " + targetState + "; ");
 				}
 			} else {
 				CharSet s = tab.CharClassSet(action.sym);
 				for (CharSet.Range r = s.head; r != null; r = r.next) {
-					gen.WriteLine("\t\tfor (var i : number = " + r.from + "; i <= " + r.to + "; ++i) start[String.fromCharCode(i)] = " + targetState + ";");
+					gen.WriteLine("\t\tfor (var i : number = " + r.from + "; i <= " + r.to + "; ++i) Scanner.start[String.fromCharCode(i)] = " + targetState + ";");
 				}
 			}
 		}
-		gen.WriteLine("\t\tstart[Buffer.EOF] = -1;");
+		gen.WriteLine("\t\tScanner.start[Buffer.EOF] = -1;");
 	}
 
 	public void WriteScanner() {
