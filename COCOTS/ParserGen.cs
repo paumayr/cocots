@@ -215,7 +215,7 @@ public class ParserGen {
 					GenErrorMsg(syncErr, curSy);
 					s1 = (BitArray)p.set.Clone();
 					gen.Write("while (!("); GenCond(s1, p); gen.Write(")) {");
-					gen.Write("this.SynErr({0}); Get();", errorNr); gen.WriteLine("}");
+					gen.Write("this.SynErr({0}); this.Get();", errorNr); gen.WriteLine("}");
 					break;
 				}
 				case Node.alt: {

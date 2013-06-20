@@ -168,7 +168,7 @@ get id() : number { return 0; }
 			this.pgen.usingPos = new Position(beg, this.la.pos, 0, line); 
 		}
 		this.Expect(6);
-		genScanner = true; 
+		this.genScanner = true; 
 		this.tab.ignored = new CharSet(); 
 		this.Expect(1);
 		gramName = this.t.val;
@@ -203,6 +203,7 @@ get id() : number { return 0; }
 		while (this.la.kind == 11) {
 			this.Get();
 			var nested = false; 
+			var tokenexprg1 : { g : Graph } = { g : null }; var tokenexprg2 : { g : Graph } = { g : null }; 
 			this.Expect(12);
 			this.TokenExpr(tokenexprg1);
 			g1 = tokenexprg1.g; 
@@ -216,27 +217,28 @@ get id() : number { return 0; }
 			this.dfa.NewComment(g1.l, g2.l, nested); 
 		}
 		while (this.la.kind == 15) {
+			var sets : { s: CharSet} = { s : null }; 
 			this.Get();
 			this.Set(sets);
 			s = sets.s; this.tab.ignored.Or(s); 
 		}
-		while (!(this.la.kind == 0 || this.la.kind == 16)) {this.SynErr(42); Get();}
+		while (!(this.la.kind == 0 || this.la.kind == 16)) {this.SynErr(42); this.Get();}
 		this.Expect(16);
-		if (genScanner) this.dfa.MakeDeterministic();
+		if (this.genScanner) this.dfa.MakeDeterministic();
 		this.tab.DeleteNodes();
 		
 		while (this.la.kind == 1) {
 			this.Get();
-			sym = this.tab.FindSym(t.val);
+			sym = this.tab.FindSym(this.t.val);
 			var undef = sym == null;
-			if (undef) sym = this.tab.NewSym(Node.nt, t.val, t.line);
+			if (undef) sym = this.tab.NewSym(Node.nt, this.t.val, this.t.line);
 			else {
 			 if (sym.typ == Node.nt) {
 			   if (sym.graph != null) this.SemErr("name declared twice");
 			 } else { 
 			   this.SemErr("this symbol kind not allowed on left side of production");
 			 }
-			 sym.line = t.line;
+			 sym.line = this.t.line;
 			}
 			var noAttrs : bool = sym.attrPos == null;
 			sym.attrPos = null;
@@ -280,20 +282,20 @@ get id() : number { return 0; }
 		if (this.tab.ddt[2]) {
 		  this.tab.PrintNodes();
 		}
-		if (errors.count == 0) {
+		if (this.errors.count == 0) {
 		 Console.WriteLine("checking");
 		 this.tab.CompSymbolSets();
 		 if (this.tab.ddt[7]) { this.tab.XRef(); }
 		 if (this.tab.GrammarOk()) {
 		   Console.Write("parser");
 		   this.pgen.WriteParser();
-		   if (genScanner) {
+		   if (this.genScanner) {
 		     Console.Write(" + scanner");
 		     this.dfa.WriteScanner();
 		     if (this.tab.ddt[0]) { this.dfa.PrintStates(); }
 		   }
 		   Console.WriteLine(" generated");
-		   if (this.tab.ddt[8]) { pgen.WriteStatistics(); }
+		   if (this.tab.ddt[8]) { this.pgen.WriteStatistics(); }
 		 }
 		}
 		if (this.tab.ddt[6]) { this.tab.PrintSymbolTable(); }
@@ -303,7 +305,7 @@ get id() : number { return 0; }
 	SetDecl(ret : {}) {
 		var s : CharSet; 
 		this.Expect(1);
-		var name = t.val;
+		var name = this.t.val;
 		var c = this.tab.FindCharClass(name);
 		if (c != null) { this.SemErr("name declared twice"); }
 		
@@ -314,21 +316,22 @@ get id() : number { return 0; }
 		
 		this.Expect(18);
 	}
-	TokenDecl(ret : {typ : number}) {
+	TokenDecl(ret : {typ : number;}) {
 		var name : string; var kind : number; var sym : Symbol; var g : Graph; 
 		this.Sym(name, kind);
 		sym = this.tab.FindSym(name);
 		if (sym != null) { this.SemErr("name declared twice"); }
 		else {
-		 sym = this.tab.NewSym(typ, name, t.line);
+		 sym = this.tab.NewSym(typ, name, this.t.line);
 		 sym.tokenKind = Symbol.fixedToken;
 		}
 		tokenString = null;
 		
-		while (!(this.StartOf(5))) {this.SynErr(43); Get();}
+		while (!(this.StartOf(5))) {this.SynErr(43); this.Get();}
 		if (this.la.kind == 17) {
+			var gres : { g: Graph } = { g : g };  
 			this.Get();
-			this.TokenExpr(g);
+			this.TokenExpr(gres);
 			this.Expect(18);
 			if (kind == str) { this.SemErr("a literal must not be declared with a structure"); }
 			this.tab.Finish(g);
@@ -343,7 +346,7 @@ get id() : number { return 0; }
 			}
 			
 		} else if (this.StartOf(6)) {
-			if (kind == id) { genScanner = false; }
+			if (kind == id) { this.genScanner = false; }
 			else { this.dfa.MatchLiteral(sym.name, sym); }
 			
 		} else this.SynErr(44);
@@ -392,8 +395,8 @@ get id() : number { return 0; }
 				}
 			}
 			this.Expect(25);
-			if (t.pos > beg) {
-			 sym.attrPos = new Position(beg, t.pos, col, line); 
+			if (this.t.pos > beg) {
+			 sym.attrPos = new Position(beg, this.t.pos, col, line); 
 			} 
 			
 		} else if (this.la.kind == 26) {
@@ -408,8 +411,8 @@ get id() : number { return 0; }
 				}
 			}
 			this.Expect(27);
-			if (t.pos > beg) {
-			 sym.attrPos = new Position(beg, t.pos, col, line); 
+			if (this.t.pos > beg) {
+			 sym.attrPos = new Position(beg, this.t.pos, col, line); 
 			} 
 			
 		} else this.SynErr(45);
@@ -429,7 +432,7 @@ get id() : number { return 0; }
 			}
 		}
 		this.Expect(40);
-		ret.pos = new Position(beg, t.pos, col, line); 
+		ret.pos = new Position(beg, this.t.pos, col, line); 
 	}
 	Expression(ret : {g : Graph;}) {
 		this.Term(term1);
@@ -446,12 +449,12 @@ get id() : number { return 0; }
 		s = new CharSet(); 
 		if (this.la.kind == 1) {
 			this.Get();
-			var c = this.tab.FindCharClass(t.val);
+			var c = this.tab.FindCharClass(this.t.val);
 			if (c == null) { this.SemErr("undefined name"); } else { s.Or(c.set); }
 			
 		} else if (this.la.kind == 3) {
 			this.Get();
-			var name = t.val;
+			var name = this.t.val;
 			name = this.tab.Unescape(name.Substring(1, name.Length-2));
 			foreach (char ch in name) {
 			 if (this.dfa.ignoreCase) { s.Set(char.ToLower(ch)); }
@@ -472,7 +475,7 @@ get id() : number { return 0; }
 	}
 	Char(ret : {n : string;}) {
 		this.Expect(5);
-		var name = t.val; n = '\0';
+		var name = this.t.val; n = '\0';
 		name = this.tab.Unescape(name.Substring(1, name.Length-2));
 		if (name.Length == 1) { n = name[0]; }
 		else { this.SemErr("unacceptable character value"); }
@@ -483,14 +486,14 @@ get id() : number { return 0; }
 		ret.name = "???"; ret.kind = id; 
 		if (this.la.kind == 1) {
 			this.Get();
-			ret.kind = id; ret.name = t.val; 
+			ret.kind = id; ret.name = this.t.val; 
 		} else if (this.la.kind == 3 || this.la.kind == 5) {
 			if (this.la.kind == 3) {
 				this.Get();
-				ret.name = t.val; 
+				ret.name = this.t.val; 
 			} else {
 				this.Get();
-				ret.name = "\"" + t.val.Substring(1, t.val.Length-2) + "\""; 
+				ret.name = "\"" + this.t.val.substring(1, t.val.Length-2) + "\""; 
 			}
 			ret.kind = str;
 			if (this.dfa.ignoreCase) ret.name = ret.name.ToLower();
@@ -528,7 +531,7 @@ get id() : number { return 0; }
 		this.Expect(30);
 		var beg = this.la.pos; var col = this.la.col; var line = this.la.line; 
 		this.Condition();
-		ret.pos = new Position(beg, t.pos, col, line); 
+		ret.pos = new Position(beg, this.t.pos, col, line); 
 	}
 	Factor(ret : {out Graph g}) {
 		var name : string; var kind : number; var pos : Position; var weak : bool = false; 
@@ -548,8 +551,8 @@ get id() : number { return 0; }
 			if (undef) {
 			 if (kind == id) {
 			   sym = this.tab.NewSym(Node.nt, name, 0);  // forward nt
-			 } else if (genScanner) { 
-			   sym = this.tab.NewSym(Node.t, name, t.line);
+			 } else if (this.genScanner) { 
+			   sym = this.tab.NewSym(Node.t, name, this.t.line);
 			   this.dfa.MatchLiteral(sym.name, sym);
 			 } else {  // undefined string in production
 			   this.SemErr("undefined string in production");
@@ -564,7 +567,7 @@ get id() : number { return 0; }
 			 if (typ == Node.t) { typ = Node.wt; }
 			 else { this.SemErr("only terminals may be weak"); }
 			}
-			var p = this.tab.NewNode(typ, sym, t.line);
+			var p = this.tab.NewNode(typ, sym, this.t.line);
 			g = new Graph(p);
 			
 			if (this.la.kind == 24 || this.la.kind == 26) {
@@ -640,7 +643,7 @@ get id() : number { return 0; }
 				}
 			}
 			this.Expect(25);
-			if (t.pos > beg) p.pos = new Position(beg, t.pos, col, line); 
+			if (this.t.pos > beg) p.pos = new Position(beg, this.t.pos, col, line); 
 		} else if (this.la.kind == 26) {
 			this.Get();
 			var beg = this.la.pos; var col = this.la.col; var line = this.la.line; 
@@ -653,7 +656,7 @@ get id() : number { return 0; }
 				}
 			}
 			this.Expect(27);
-			if (t.pos > beg) p.pos = new Position(beg, t.pos, col, line); 
+			if (this.t.pos > beg) p.pos = new Position(beg, this.t.pos, col, line); 
 		} else this.SynErr(50);
 	}
 	Condition(ret : {}) {

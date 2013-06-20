@@ -101,28 +101,30 @@ Coco                            (. var sym : Symbol; var g : Graph; var g1 : Gra
   [ "TOKENS"  { TokenDecl<Node.t> }]
   [ "PRAGMAS" { TokenDecl<Node.pr> }]
   { "COMMENTS"                          (. var nested = false; .)
+                                        (. var tokenexprg1 : { g : Graph } = { g : null }; var tokenexprg2 : { g : Graph } = { g : null }; .)
     "FROM" TokenExpr<tokenexprg1>       (. g1 = tokenexprg1.g; .) 
     "TO" TokenExpr<tokenexprg2>         (. g2 = tokenexprg2.g; .)
     [ "NESTED"                          (. nested = true; .)
     ]                                   (. this.dfa.NewComment(g1.l, g2.l, nested); .)
   }
-  { "IGNORE" Set<sets>                 (. s = sets.s; this.tab.ignored.Or(s); .)
+  {                                     (. var sets : { s: CharSet} = { s : null }; .)
+     "IGNORE" Set<sets>                 (. s = sets.s; this.tab.ignored.Or(s); .)
   }
 
   SYNC 
   "PRODUCTIONS"                 (. if (this.genScanner) this.dfa.MakeDeterministic();
                                    this.tab.DeleteNodes();
                                  .)
-  { ident                       (. sym = this.tab.FindSym(t.val);
+  { ident                       (. sym = this.tab.FindSym(this.t.val);
                                    var undef = sym == null;
-                                   if (undef) sym = this.tab.NewSym(Node.nt, t.val, t.line);
+                                   if (undef) sym = this.tab.NewSym(Node.nt, this.t.val, this.t.line);
                                    else {
                                      if (sym.typ == Node.nt) {
                                        if (sym.graph != null) this.SemErr("name declared twice");
                                      } else { 
                                        this.SemErr("this symbol kind not allowed on left side of production");
                                      }
-                                     sym.line = t.line;
+                                     sym.line = this.t.line;
                                    }
                                    var noAttrs : bool = sym.attrPos == null;
                                    sym.attrPos = null;
@@ -159,7 +161,7 @@ Coco                            (. var sym : Symbol; var g : Graph; var g1 : Gra
                                    if (this.tab.ddt[2]) {
                                       this.tab.PrintNodes();
                                    }
-                                   if (errors.count == 0) {
+                                   if (this.errors.count == 0) {
                                      Console.WriteLine("checking");
                                      this.tab.CompSymbolSets();
                                      if (this.tab.ddt[7]) { this.tab.XRef(); }
@@ -172,7 +174,7 @@ Coco                            (. var sym : Symbol; var g : Graph; var g1 : Gra
                                          if (this.tab.ddt[0]) { this.dfa.PrintStates(); }
                                        }
                                        Console.WriteLine(" generated");
-                                       if (this.tab.ddt[8]) { pgen.WriteStatistics(); }
+                                       if (this.tab.ddt[8]) { this.pgen.WriteStatistics(); }
                                      }
                                    }
                                    if (this.tab.ddt[6]) { this.tab.PrintSymbolTable(); }
@@ -184,7 +186,7 @@ Coco                            (. var sym : Symbol; var g : Graph; var g1 : Gra
 
 SetDecl                         (. var s : CharSet; .)
 =
-  ident                         (. var name = t.val;
+  ident                         (. var name = this.t.val;
                                    var c = this.tab.FindCharClass(name);
                                    if (c != null) { this.SemErr("name declared twice"); }
                                  .)
@@ -208,10 +210,10 @@ Set<s : CharSet;>              (. var s2 : CharSet; .)
 
 SimSet<s : CharSet;>            (. var n1 : number; var n2 : number; .)
 =                               (. s = new CharSet(); .)
-( ident                         (. var c = this.tab.FindCharClass(t.val);
+( ident                         (. var c = this.tab.FindCharClass(this.t.val);
                                    if (c == null) { this.SemErr("undefined name"); } else { s.Or(c.set); }
                                  .)
-| string                        (. var name = t.val;
+| string                        (. var name = this.t.val;
                                    name = this.tab.Unescape(name.Substring(1, name.Length-2));
                                    foreach (char ch in name) {
                                      if (this.dfa.ignoreCase) { s.Set(char.ToLower(ch)); }
@@ -228,7 +230,7 @@ SimSet<s : CharSet;>            (. var n1 : number; var n2 : number; .)
 
 Char<n : string;>
 =
-  char                          (. var name = t.val; n = '\0';
+  char                          (. var name = this.t.val; n = '\0';
                                    name = this.tab.Unescape(name.Substring(1, name.Length-2));
                                    if (name.Length == 1) { n = name[0]; }
                                    else { this.SemErr("unacceptable character value"); }
@@ -243,13 +245,14 @@ TokenDecl<typ : number;>         (. var name : string; var kind : number; var sy
   Sym<name, kind>               (. sym = this.tab.FindSym(name);
                                    if (sym != null) { this.SemErr("name declared twice"); }
                                    else {
-                                     sym = this.tab.NewSym(typ, name, t.line);
+                                     sym = this.tab.NewSym(typ, name, this.t.line);
                                      sym.tokenKind = Symbol.fixedToken;
                                    }
                                    tokenString = null;
                                  .)
   SYNC
-  ( '=' TokenExpr<g> '.'        (. if (kind == str) { this.SemErr("a literal must not be declared with a structure"); }
+  (                             (. var gres : { g: Graph } = { g : g };  .)
+	'=' TokenExpr<gres> '.'        (. if (kind == str) { this.SemErr("a literal must not be declared with a structure"); }
                                    this.tab.Finish(g);
                                    if (tokenString == null || tokenString.Equals(noString)) {
                                      this.dfa.ConvertToStates(g.l, sym);
@@ -277,16 +280,16 @@ AttrDecl<sym : Symbol;>
   { ANY
   | badString                   (. this.SemErr("bad string in attributes"); .)
   }
-  '>'                           (. if (t.pos > beg) {
-                                     sym.attrPos = new Position(beg, t.pos, col, line); 
+  '>'                           (. if (this.t.pos > beg) {
+                                     sym.attrPos = new Position(beg, this.t.pos, col, line); 
                                    } 
 								.)
 | "<."                          (. var beg = this.la.pos; var col = this.la.col; var line = this.la.line; .)
   { ANY
   | badString                   (. this.SemErr("bad string in attributes"); .)
   }
-  ".>"                          (. if (t.pos > beg) {
-                                     sym.attrPos = new Position(beg, t.pos, col, line); 
+  ".>"                          (. if (this.t.pos > beg) {
+                                     sym.attrPos = new Position(beg, this.t.pos, col, line); 
                                    } 
 								.)
 .
@@ -340,7 +343,7 @@ Factor<out Graph g>             (. var name : string; var kind : number; var pos
                                      if (kind == id) {
                                        sym = this.tab.NewSym(Node.nt, name, 0);  // forward nt
                                      } else if (this.genScanner) { 
-                                       sym = this.tab.NewSym(Node.t, name, t.line);
+                                       sym = this.tab.NewSym(Node.t, name, this.t.line);
                                        this.dfa.MatchLiteral(sym.name, sym);
                                      } else {  // undefined string in production
                                        this.SemErr("undefined string in production");
@@ -355,7 +358,7 @@ Factor<out Graph g>             (. var name : string; var kind : number; var pos
                                      if (typ == Node.t) { typ = Node.wt; }
                                      else { this.SemErr("only terminals may be weak"); }
                                    }
-                                   var p = this.tab.NewNode(typ, sym, t.line);
+                                   var p = this.tab.NewNode(typ, sym, this.t.line);
                                    g = new Graph(p);
                                  .)
   [ Attribs<p>                  (. if (kind != id) { this.SemErr("a literal must not have attributes"); } .)
@@ -388,7 +391,7 @@ Factor<out Graph g>             (. var name : string; var kind : number; var pos
 Resolver<pos : Position;>
 =
   "IF" "("                       (. var beg = this.la.pos; var col = this.la.col; var line = this.la.line; .)
-  Condition                      (. ret.pos = new Position(beg, t.pos, col, line); .)
+  Condition                      (. ret.pos = new Position(beg, this.t.pos, col, line); .)
 .
 
 /*------------------------------------------------------------------------------------*/
@@ -458,9 +461,9 @@ TokenFactor<g : Graph;>        (. .)
 
 Sym<name : string; kind : number;>
 =                               (. ret.name = "???"; ret.kind = id; .)
-( ident                         (. ret.kind = id; ret.name = t.val; .)
-| (string                       (. ret.name = t.val; .)
-  | char                        (. ret.name = "\"" + t.val.Substring(1, t.val.Length-2) + "\""; .)
+( ident                         (. ret.kind = id; ret.name = this.t.val; .)
+| (string                       (. ret.name = this.t.val; .)
+  | char                        (. ret.name = "\"" + this.t.val.substring(1, t.val.Length-2) + "\""; .)
   )                             (. ret.kind = str;
                                    if (this.dfa.ignoreCase) ret.name = ret.name.ToLower();
                                    if (ret.name.IndexOf(' ') >= 0)
@@ -476,12 +479,12 @@ Attribs<p : Node>          // TODO: in argument!!
   { ANY 
   | badString                   (. this.SemErr("bad string in attributes"); .)
   }
-  '>'                           (. if (t.pos > beg) p.pos = new Position(beg, t.pos, col, line); .)
+  '>'                           (. if (this.t.pos > beg) p.pos = new Position(beg, this.t.pos, col, line); .)
 | "<."                          (. var beg = this.la.pos; var col = this.la.col; var line = this.la.line; .)
   { ANY 
   | badString                   (. this.SemErr("bad string in attributes"); .)
   }
-  ".>"                          (. if (t.pos > beg) p.pos = new Position(beg, t.pos, col, line); .)
+  ".>"                          (. if (this.t.pos > beg) p.pos = new Position(beg, this.t.pos, col, line); .)
 .
 
 /*------------------------------------------------------------------------------------*/
@@ -493,7 +496,7 @@ SemText<pos : Position;>
   | badString                   (. this.SemErr("bad string in semantic action"); .)
   | "(."                        (. this.SemErr("missing end of previous semantic action"); .)
   }
-  ".)"                          (. ret.pos = new Position(beg, t.pos, col, line); .)
+  ".)"                          (. ret.pos = new Position(beg, this.t.pos, col, line); .)
 .
 
 END Coco.
