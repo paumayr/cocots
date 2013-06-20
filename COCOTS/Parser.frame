@@ -26,9 +26,13 @@ Coco/R itself) does not fall under the GNU General Public License.
 ----------------------------------------------------------------------*/
 -->begin
 
--->namespace
-
+/// <reference path="ParserGen.ts" />
+/// <reference path="Util.ts" />
+/// <reference path="DFA.ts" />
+/// <reference path="Tab.ts" />
 /// <reference path="Scanner.ts" />
+
+-->namespace
 
 export class Parser {
 -->constants

@@ -26,11 +26,15 @@ Coco/R itself) does not fall under the GNU General Public License.
 -----------------------------------------------------------------------*/
 
 
+/// <reference path="ParserGen.ts" />
+/// <reference path="Util.ts" />
+/// <reference path="DFA.ts" />
+/// <reference path="Tab.ts" />
+/// <reference path="Scanner.ts" />
+
 module at.jku.ssw.coco {
 
 
-
-/// <reference path="Scanner.ts" />
 
 export class Parser {
 	public static _EOF : number = 0;
@@ -247,7 +251,7 @@ get id() : number { return 0; }
 				this.AttrDecl(sym);
 			}
 			if (!undef) {
-			 if (noAttrs != (sym.attrPos == null)) {
+			 if (noAttrs != (this.sym.attrPos == null)) {
 			   this.SemErr("attribute mismatch between declaration and use of this symbol");
 			 }
 			}
@@ -283,18 +287,18 @@ get id() : number { return 0; }
 		  this.tab.PrintNodes();
 		}
 		if (this.errors.count == 0) {
-		 Console.WriteLine("checking");
+		 Console.prototype.log("checking");
 		 this.tab.CompSymbolSets();
 		 if (this.tab.ddt[7]) { this.tab.XRef(); }
 		 if (this.tab.GrammarOk()) {
-		   Console.Write("parser");
+		   Console.prototype.log("parser");
 		   this.pgen.WriteParser();
 		   if (this.genScanner) {
-		     Console.Write(" + scanner");
+		     Console.prototype.log(" + scanner");
 		     this.dfa.WriteScanner();
 		     if (this.tab.ddt[0]) { this.dfa.PrintStates(); }
 		   }
-		   Console.WriteLine(" generated");
+		   Console.prototype.log(" generated");
 		   if (this.tab.ddt[8]) { this.pgen.WriteStatistics(); }
 		 }
 		}
@@ -630,7 +634,7 @@ get id() : number { return 0; }
 		 g = new Graph(this.tab.NewNode(Node.eps, null, 0));
 		}
 	}
-	Attribs(ret : {p : Node}) {
+	Attribs(ret : {p : Node;}) {
 		if (this.la.kind == 24) {
 			this.Get();
 			var beg = this.la.pos; var col = this.la.col; var line = this.la.line; 
@@ -693,6 +697,7 @@ get id() : number { return 0; }
 		
 		ret.g = null; 
 		if (this.la.kind == 1 || this.la.kind == 3 || this.la.kind == 5) {
+			var sym : { name : string; kind : number } = { name : "", kind : -1 }; 
 			this.Sym(sym);
 			if (sym.kind == id) {
 			 var c = this.tab.FindCharClass(sym.name);
@@ -711,6 +716,7 @@ get id() : number { return 0; }
 			}
 			
 		} else if (this.la.kind == 30) {
+			var tokenexprg : { g: Graph} = {g : null}; 
 			this.Get();
 			this.TokenExpr(tokenexprg);
 			this.Expect(31);

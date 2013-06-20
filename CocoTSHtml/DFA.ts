@@ -30,7 +30,7 @@ Coco/R itself) does not fall under the GNU General Public License.
 /// <reference path="Util.ts" />
 /// <reference path="Scanner.ts" />
 
-module at.jku.ssw.Coco {
+module at.jku.ssw.coco {
 
 //-----------------------------------------------------------------------------
 //  State
@@ -542,7 +542,7 @@ export class DFA {
 
 	DeleteRedundantStates() {
 		var newState = new State[this.lastStateNr + 1];
-		var used = new BitArray(this.lastStateNr + 1);
+		var used = new BitArray(this.lastStateNr + 1, false);
 		this.FindUsedStates(this.firstState, used);
 		// combine equal final states
 		for (var s1 = this.firstState.next; s1 != null; s1 = s1.next) // firstState cannot be final
@@ -605,7 +605,7 @@ export class DFA {
 
 				this.Step(from, p.sub, stepped);
 				if (p.state != from) {
-					this.Step(p.state, p, new BitArray(this.tab.nodes.length));
+					this.Step(p.state, p, new BitArray(this.tab.nodes.length, false));
 				}
 				break;
 			}
@@ -664,7 +664,7 @@ export class DFA {
 		if (p == null || marked[p.n]) return;
 		marked[p.n] = true;
 		if (start) {
-			this.Step(p.state, p, new BitArray(this.tab.nodes.length)); // start of group of equally numbered nodes
+			this.Step(p.state, p, new BitArray(this.tab.nodes.length, false)); // start of group of equally numbered nodes
 		}
 
 		switch (p.typ) {
@@ -698,9 +698,9 @@ export class DFA {
 		}
 
 		this.NumberNodes(p, this.firstState, true);
-		this.FindTrans(p, true, new BitArray(this.tab.nodes.length));
+		this.FindTrans(p, true, new BitArray(this.tab.nodes.length, false));
 		if (p.typ == Node.iter) {
-			this.Step(this.firstState, p, new BitArray(this.tab.nodes.length));
+			this.Step(this.firstState, p, new BitArray(this.tab.nodes.length, false));
 		}
 	}
 
@@ -918,7 +918,7 @@ export class DFA {
 		var ret: { targets: BitArray; endOf: Symbol; ctx: bool; };
 		ret.endOf = null;
 		ret.ctx = false;
-		ret.targets = new BitArray(this.maxStates);
+		ret.targets = new BitArray(this.maxStates, false);
 
 		for (var t = a.target; t != null; t = t.next) {
 			var stateNr = t.state.nr;
@@ -987,14 +987,14 @@ export class DFA {
 		var s = new StringBuilder("");
 		while (p != null) {
 			if (p.typ == Node.chr) {
-				s.AppendNumber(p.val);
+				s.appendNumber(p.val);
 			} else if (p.typ == Node.clas) {
 				var set = this.tab.CharClassSet(p.val);
 				if (set.Elements() != 1) {
 					this.parser.SemErr("character set contains more than 1 character");
 				}
 
-				s.AppendNumber(set.First());
+				s.appendNumber(set.First());
 			} else {
 				this.parser.SemErr("comment delimiters may not be structured");
 			}

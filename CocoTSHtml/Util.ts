@@ -1,5 +1,5 @@
 
-module at.jku.ssw.Coco {
+module at.jku.ssw.coco {
 	
 	export class FileStream {
 		public ReadCharacter(): string {

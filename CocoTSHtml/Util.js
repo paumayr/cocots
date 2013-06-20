@@ -2,7 +2,7 @@ var at;
 (function (at) {
     (function (jku) {
         (function (ssw) {
-            (function (Coco) {
+            (function (coco) {
                 var FileStream = (function () {
                     function FileStream() {
                     }
@@ -11,7 +11,7 @@ var at;
                     };
                     return FileStream;
                 })();
-                Coco.FileStream = FileStream;
+                coco.FileStream = FileStream;
 
                 var StreamWriter = (function () {
                     function StreamWriter() {
@@ -44,7 +44,7 @@ var at;
                     };
                     return StreamWriter;
                 })();
-                Coco.StreamWriter = StreamWriter;
+                coco.StreamWriter = StreamWriter;
 
                 var StringWriter = (function () {
                     function StringWriter() {
@@ -60,7 +60,7 @@ var at;
                     };
                     return StringWriter;
                 })();
-                Coco.StringWriter = StringWriter;
+                coco.StringWriter = StringWriter;
 
                 var TextWriter = (function () {
                     function TextWriter() {
@@ -90,12 +90,12 @@ var at;
                     };
                     return TextWriter;
                 })();
-                Coco.TextWriter = TextWriter;
+                coco.TextWriter = TextWriter;
 
                 function isLetter(str) {
                     return str.length === 1 && str.match(/[a-z]/i) != null;
                 }
-                Coco.isLetter = isLetter;
+                coco.isLetter = isLetter;
 
                 var BitArray = (function () {
                     function BitArray(size, value) {
@@ -127,7 +127,7 @@ var at;
                     };
                     return BitArray;
                 })();
-                Coco.BitArray = BitArray;
+                coco.BitArray = BitArray;
 
                 var Hashtable = (function () {
                     function Hashtable() {
@@ -141,7 +141,7 @@ var at;
                     });
                     return Hashtable;
                 })();
-                Coco.Hashtable = Hashtable;
+                coco.Hashtable = Hashtable;
 
                 var StringBuilder = (function () {
                     function StringBuilder(s) {
@@ -165,9 +165,9 @@ var at;
                     };
                     return StringBuilder;
                 })();
-                Coco.StringBuilder = StringBuilder;
-            })(ssw.Coco || (ssw.Coco = {}));
-            var Coco = ssw.Coco;
+                coco.StringBuilder = StringBuilder;
+            })(ssw.coco || (ssw.coco = {}));
+            var coco = ssw.coco;
         })(jku.ssw || (jku.ssw = {}));
         var ssw = jku.ssw;
     })(at.jku || (at.jku = {}));

@@ -130,7 +130,7 @@ Coco                            (. var sym : Symbol; var g : Graph; var g1 : Gra
                                    sym.attrPos = null;
                                  .)
     [ AttrDecl<sym> ]           (. if (!undef) {
-                                     if (noAttrs != (sym.attrPos == null)) {
+                                     if (noAttrs != (this.sym.attrPos == null)) {
                                        this.SemErr("attribute mismatch between declaration and use of this symbol");
                                      }
                                    }
@@ -162,18 +162,18 @@ Coco                            (. var sym : Symbol; var g : Graph; var g1 : Gra
                                       this.tab.PrintNodes();
                                    }
                                    if (this.errors.count == 0) {
-                                     Console.WriteLine("checking");
+                                     Console.prototype.log("checking");
                                      this.tab.CompSymbolSets();
                                      if (this.tab.ddt[7]) { this.tab.XRef(); }
                                      if (this.tab.GrammarOk()) {
-                                       Console.Write("parser");
+                                       Console.prototype.log("parser");
                                        this.pgen.WriteParser();
                                        if (this.genScanner) {
-                                         Console.Write(" + scanner");
+                                         Console.prototype.log(" + scanner");
                                          this.dfa.WriteScanner();
                                          if (this.tab.ddt[0]) { this.dfa.PrintStates(); }
                                        }
-                                       Console.WriteLine(" generated");
+                                       Console.prototype.log(" generated");
                                        if (this.tab.ddt[8]) { this.pgen.WriteStatistics(); }
                                      }
                                    }
@@ -433,7 +433,8 @@ TokenTerm<g: Graph;>          (. var g2 : Graph; .)
 TokenFactor<g : Graph;>        (. .)
 =
                                 (. ret.g = null; .)
-( Sym<sym>                      (. if (sym.kind == id) {
+(                               (. var sym : { name : string; kind : number } = { name : "", kind : -1 }; .)
+  Sym<sym>                      (. if (sym.kind == id) {
                                      var c = this.tab.FindCharClass(sym.name);
                                      if (c == null) {
                                        this.SemErr("undefined name");
@@ -449,7 +450,8 @@ TokenFactor<g : Graph;>        (. .)
                                      else tokenString = noString;
                                    }
                                  .)
-| '(' TokenExpr<tokenexprg> ')'      (. ret.g = tokenexpr.g; .)
+|                                      (. var tokenexprg : { g: Graph} = {g : null}; .)
+	'(' TokenExpr<tokenexprg> ')'      (. ret.g = tokenexpr.g; .)
 | '[' TokenExpr<tokenexprg> ']'      (. ret.g = tokenexpr.g; this.tab.MakeOption(g); tokenString = noString; .)
 | '{' TokenExpr<tokenexprg> '}'      (. ret.g = tokenexpr.g; this.tab.MakeIteration(g); tokenString = noString; .)
 )                                    (. if (ret.g == null) { // invalid start of TokenFactor
@@ -473,7 +475,7 @@ Sym<name : string; kind : number;>
 
 /*------------------------------------------------------------------------------------*/
 
-Attribs<p : Node>          // TODO: in argument!!
+Attribs<p : Node;>          // TODO: in argument!!
 =
   '<'                           (. var beg = this.la.pos; var col = this.la.col; var line = this.la.line; .)
   { ANY 

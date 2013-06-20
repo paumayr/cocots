@@ -32,7 +32,7 @@ Coco/R itself) does not fall under the GNU General Public License.
 /// <reference path="Scanner.ts" />
 /// <reference path="DFA.ts" />
 
-module at.jku.ssw.Coco {
+module at.jku.ssw.coco {
 
 export class ParserGen {
 
@@ -79,7 +79,7 @@ export class ParserGen {
 		var s2: BitArray;
 		if (p.typ != Node.alt) return false;
 		var nAlts : number = 0;
-		s1 = new BitArray(this.tab.terminals.length);
+		s1 = new BitArray(this.tab.terminals.length, false);
 		while (p != null) {
 			s2 = this.tab.Expected0(p.sub, this.curSy);
 			// must not optimize with switch statement, if there are ll1 warnings
@@ -306,7 +306,7 @@ export class ParserGen {
 						s1 = this.tab.Expected(p2.next, this.curSy);
 						s2 = this.tab.Expected(p.next, this.curSy);
 						this.gen.WriteFormatted3("this.WeakSeparator({0},{1},{2}) ", p2.sym.n, this.NewCondSet(s1), this.NewCondSet(s2));
-						s1 = new BitArray(this.tab.terminals.length);  // for inner structure
+						s1 = new BitArray(this.tab.terminals.length, false);  // for inner structure
 						if (p2.up || p2.next == null) {
 							p2 = null;
 						} else {
@@ -385,7 +385,7 @@ export class ParserGen {
 			this.CopySourcePart(sym.attrPos, 0);
 			this.gen.WriteLineText("};");
 			this.CopySourcePart(sym.semPos, 2);
-			this.GenCode(sym.graph, 2, new BitArray(this.tab.terminals.length));
+			this.GenCode(sym.graph, 2, new BitArray(this.tab.terminals.length, false));
 			this.gen.WriteLineText("\t\treturn ret;");
 			this.gen.WriteLineText("\t}");
 		}
