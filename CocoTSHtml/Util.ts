@@ -140,6 +140,11 @@ module at.jku.ssw.coco {
 			// TODO
 			return 0;
 		}
+
+		public get(name: string) : Symbol {
+			// TODO
+			return null;
+		}
 	}
 
 	export class StringBuilder {

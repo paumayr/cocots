@@ -37,7 +37,7 @@ export class Position {  // position of source code stretch (e.g. semantic actio
 	private _col : number;      // column number of start position
 	private _line : number;     // line number of start position
 
-	public Position(beg : number, end : number, col : number, line : number) {
+	constructor(beg : number, end : number, col : number, line : number) {
 		this._beg = beg;
 		this._end = end;
 		this._col = col;

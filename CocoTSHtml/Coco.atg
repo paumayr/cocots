@@ -33,8 +33,8 @@ $namespace=at.jku.ssw.Coco
 
 COMPILER Coco
 
-	get id() : number { return 0; }
-	get str() : number { return 1; }
+	static get id() : number { return 0; }
+	static get str() : number { return 1; }
 	
 	public trace : TextWriter ;    // other Coco objects referenced in this ATG
 	public tab : Tab;
@@ -43,7 +43,7 @@ COMPILER Coco
 
 	genScanner : bool;
 	tokenString : string;         // used in declarations of literal tokens
-	noString : string = "-none-"; // used in declarations of literal tokens
+	static get noString(): string { return "-none-"; } // used in declarations of literal tokens
 
 /*-------------------------------------------------------------------------*/
 
@@ -98,8 +98,8 @@ Coco                            (. var sym : Symbol; var g : Graph; var g1 : Gra
   { ANY }                       (. this.tab.semDeclPos = new Position(beg, this.la.pos, 0, line); .)
   [ "IGNORECASE"                (. this.dfa.ignoreCase = true; .) ]   /* pdt */
   [ "CHARACTERS" { SetDecl }]
-  [ "TOKENS"  { TokenDecl<Node.t> }]
-  [ "PRAGMAS" { TokenDecl<Node.pr> }]
+  [ "TOKENS"  { TokenDecl<{ typ : Node.t }> }]
+  [ "PRAGMAS" { TokenDecl<{ typ : Node.pr }> }]
   { "COMMENTS"                          (. var nested = false; .)
                                         (. var tokenexprg1 : { g : Graph } = { g : null }; var tokenexprg2 : { g : Graph } = { g : null }; .)
     "FROM" TokenExpr<tokenexprg1>       (. g1 = tokenexprg1.g; .) 
@@ -129,15 +129,20 @@ Coco                            (. var sym : Symbol; var g : Graph; var g1 : Gra
                                    var noAttrs : bool = sym.attrPos == null;
                                    sym.attrPos = null;
                                  .)
-    [ AttrDecl<sym> ]           (. if (!undef) {
-                                     if (noAttrs != (this.sym.attrPos == null)) {
-                                       this.SemErr("attribute mismatch between declaration and use of this symbol");
+    [                             (. var retsym : { sym : Symbol } = { sym : sym }; .)
+     AttrDecl<retsym> ]           (. sym = retsym.sym;
+                                     if (!undef) {
+                                       if (noAttrs != (sym.attrPos == null)) {
+                                         this.SemErr("attribute mismatch between declaration and use of this symbol");
                                      }
                                    }
                                  .)
-    [ SemText<out sym.semPos> ] WEAK
-    '='
-    Expression<out g>           (. sym.graph = g.l;
+    [                            (. var retSemPos : { pos : Position } = { pos : null}; .)
+      SemText<retSemPos>		(. sym.semPos = retSemPos.pos; .)
+	 ] WEAK
+    '='                         (. var expressionret : { g : Graph } = { g : null }; .)
+    Expression<expressionret>   (. g = expressionret.g;
+	                               sym.graph = g.l;
                                    this.tab.Finish(g);
                                  .)
                                 WEAK
@@ -190,85 +195,94 @@ SetDecl                         (. var s : CharSet; .)
                                    var c = this.tab.FindCharClass(name);
                                    if (c != null) { this.SemErr("name declared twice"); }
                                  .)
-  '=' Set<s>                    (. if (s.Elements() == 0) { this.SemErr("character set must not be empty"); }
-                                   this.tab.NewCharClass(name, s);
+  '='                         (. var rets : { s: CharSet } = { s : null }; .)
+	Set<rets>                    (. if (rets.s.Elements() == 0) { this.SemErr("character set must not be empty"); }
+                                   this.tab.NewCharClass(name, rets.s);
                                  .)
   '.'
 .
 
 /*------------------------------------------------------------------------------------*/
 
-Set<s : CharSet;>              (. var s2 : CharSet; .)
+Set<s : CharSet;>              (. var rets2 : { s: CharSet} = { s : null }; .)
 =
-  SimSet<ret.s>
-  { '+' SimSet<s2>          (. ret.s.Or(s2); .)
-  | '-' SimSet<s2>          (. ret.s.Subtract(s2); .)
+  SimSet<ret>
+  { '+' SimSet<rets2>          (. ret.s.Or(rets2.s); .)
+  | '-' SimSet<rets2>          (. ret.s.Subtract(rets2.s); .)
   }
 .
 
 /*------------------------------------------------------------------------------------*/
 
 SimSet<s : CharSet;>            (. var n1 : number; var n2 : number; .)
-=                               (. s = new CharSet(); .)
+=                               (. ret.s = new CharSet(); .)
 ( ident                         (. var c = this.tab.FindCharClass(this.t.val);
-                                   if (c == null) { this.SemErr("undefined name"); } else { s.Or(c.set); }
+                                   if (c == null) { this.SemErr("undefined name"); } else { ret.s.Or(c.set); }
                                  .)
 | string                        (. var name = this.t.val;
-                                   name = this.tab.Unescape(name.Substring(1, name.Length-2));
-                                   foreach (char ch in name) {
-                                     if (this.dfa.ignoreCase) { s.Set(char.ToLower(ch)); }
-                                     else { s.Set(ch); }
+                                   name = this.tab.Unescape(name.substring(1, name.length-2));
+                                   for (var i = 0; i < name.length; i++)
+                                   {
+	                                 var ch = name.charAt(i);
+                                     if (this.dfa.ignoreCase) { ret.s.Set(ch.toLowerCase().charCodeAt(0)); }
+                                     else { ret.s.Set(ch.charCodeAt(0)); }
                                    }  .)
-| Char<n1 : number;>                  (. s.Set(n1); .)
-  [ ".." Char<n2>               (. for (var i = n1; i <= n2; i++) { s.Set(i); } .)
+|                               (. var n1ret : { n : number } = { n : null }; .)
+  Char<n1ret>                   (. ret.s.Set(n1ret.n); .)
+  [                             (. var n2ret : { n : number } = { n : null }; .)
+     ".." Char<n2ret>           (. for (var i = n1ret.n; i <= n2ret.n; i++) { ret.s.Set(i); } .)
   ]
-| "ANY"                         (. s = new CharSet(); s.Fill(); .)
+| "ANY"                         (. ret.s = new CharSet(); ret.s.Fill(); .)
 )
 .
 
 /*--------------------------------------------------------------------------------------*/
 
-Char<n : string;>
+Char<n : number;>
 =
-  char                          (. var name = this.t.val; n = '\0';
-                                   name = this.tab.Unescape(name.Substring(1, name.Length-2));
-                                   if (name.Length == 1) { n = name[0]; }
+  char                          (. var name = this.t.val; ret.n = '\0'.charCodeAt(0);
+                                   name = this.tab.Unescape(name.substring(1, name.length-2));
+                                   if (name.length == 1) { ret.n = name[0]; }
                                    else { this.SemErr("unacceptable character value"); }
-                                   if (this.dfa.ignoreCase && n >= 'A' && n <= 'Z') n = n.toUpper();
+                                   if (this.dfa.ignoreCase && ret.n >= 'A'.charCodeAt(0) && ret.n <= 'Z'.charCodeAt(0)) ret.n = String.fromCharCode(ret.n).toUpperCase().charCodeAt(0);
                                  .)
 .
 
 /*------------------------------------------------------------------------------------*/
 
-TokenDecl<typ : number;>         (. var name : string; var kind : number; var sym : Symbol; var g : Graph; .)
+TokenDecl<typ : number;>         (. var symret : { name : string; kind : number } = { name : null, kind : null};
+                                    var sym : Symbol; var g : Graph; .)
 =
-  Sym<name, kind>               (. sym = this.tab.FindSym(name);
+  Sym<symret>                   (. sym = this.tab.FindSym(symret.name);
                                    if (sym != null) { this.SemErr("name declared twice"); }
                                    else {
-                                     sym = this.tab.NewSym(typ, name, this.t.line);
+                                     sym = this.tab.NewSym(ret.typ, symret.name, this.t.line);
                                      sym.tokenKind = Symbol.fixedToken;
                                    }
-                                   tokenString = null;
+                                   this.tokenString = null;
                                  .)
   SYNC
   (                             (. var gres : { g: Graph } = { g : g };  .)
-	'=' TokenExpr<gres> '.'        (. if (kind == str) { this.SemErr("a literal must not be declared with a structure"); }
+	'=' TokenExpr<gres> '.'        (. if (symret.kind == Parser.str) { this.SemErr("a literal must not be declared with a structure"); }
                                    this.tab.Finish(g);
-                                   if (tokenString == null || tokenString.Equals(noString)) {
+                                   if (this.tokenString == null || this.tokenString == Parser.noString) {
                                      this.dfa.ConvertToStates(g.l, sym);
                                    } else { // TokenExpr is a single string
-                                     if (this.tab.literals[tokenString] != null) {
+                                     if (this.tab.literals[this.tokenString] != null) {
                                        this.SemErr("token string declared twice");
                                      }
-                                     this.tab.literals[tokenString] = sym;
-                                     this.dfa.MatchLiteral(tokenString, sym);
+                                     this.tab.literals[this.tokenString] = sym;
+                                     this.dfa.MatchLiteral(this.tokenString, sym);
                                    }
                                  .)
-  |                             (. if (kind == id) { this.genScanner = false; }
+  |                             (. if (symret.kind == Parser.id) { this.genScanner = false; }
                                    else { this.dfa.MatchLiteral(sym.name, sym); }
                                  .)
   )
-  [ SemText<out sym.semPos>     (. if (typ != Node.pr) { this.SemErr("semantic action not allowed here"); } .)
+  [                        (. var retSemPos : { pos : Position } = { pos : null }; .)
+	SemText<retSemPos>     (. 
+                             sym.semPos = retSemPos.pos;
+                             if (ret.typ != Node.pr) { this.SemErr("semantic action not allowed here"); } .)
   ]
 .
 
@@ -281,7 +295,7 @@ AttrDecl<sym : Symbol;>
   | badString                   (. this.SemErr("bad string in attributes"); .)
   }
   '>'                           (. if (this.t.pos > beg) {
-                                     sym.attrPos = new Position(beg, this.t.pos, col, line); 
+                                     ret.sym.attrPos = new Position(beg, this.t.pos, col, line); 
                                    } 
 								.)
 | "<."                          (. var beg = this.la.pos; var col = this.la.col; var line = this.la.line; .)
@@ -289,7 +303,7 @@ AttrDecl<sym : Symbol;>
   | badString                   (. this.SemErr("bad string in attributes"); .)
   }
   ".>"                          (. if (this.t.pos > beg) {
-                                     sym.attrPos = new Position(beg, this.t.pos, col, line); 
+                                     ret.sym.attrPos = new Position(beg, this.t.pos, col, line); 
                                    } 
 								.)
 .
@@ -297,10 +311,10 @@ AttrDecl<sym : Symbol;>
 /*------------------------------------------------------------------------------------*/
 
 Expression<g : Graph;>
-= 
+=                             (. var term1 : { g : Graph } = { g : null }; .)
   Term<term1>                 (. ret.g = term1.g; var first = true; .)
   {                             WEAK
-    '|'
+    '|'                       (. var term2 : { g : Graph } = { g : null }; .)
     Term<term2>                (. if (first) { this.tab.MakeFirstAlt(ret.g); first = false; }
                                    this.tab.MakeAlternative(ret.g, term2.g);
                                  .)
@@ -309,41 +323,48 @@ Expression<g : Graph;>
 
 /*------------------------------------------------------------------------------------*/
 
-Term<g : Graph;>               (. var g2 : Graph; var rslv : Node = null; g = null; .)
+Term<g : Graph;>               (. var g2 : Graph; var rslv : Node = null; ret.g = null; .)
 =
-( [                             (. rslv = this.tab.NewNode(Node.rslv, null, this.la.line); .)
-    Resolver<rslvpos>           (. rslv.pos = rslvpos.pos; g = new Graph(rslv); .)
+( [                             (. rslv = this.tab.NewNode(Node.rslv, null, this.la.line);
+                                   var rslvpos : { pos : Position } = { pos : null }; 
+                                 .)
+    Resolver<rslvpos>           (. rslv.pos = rslvpos.pos; ret.g = new Graph(rslv, rslv); .)
   ]
+                                (. var factorg2 : { g : Graph } = { g : null }; .)
   Factor<factorg2>              (. g2 = factorg2.g;
-                                   if (rslv != null) this.tab.MakeSequence(ret.g, ret.g2);
+                                   if (rslv != null) this.tab.MakeSequence(ret.g, g2);
                                    else ret.g = g2;
                                  .)
-  { Factor<factorg2>            (. g2 = factorg2.g; this.tab.MakeSequence(ret.g, ret.g2); .)
+  {
+    Factor<factorg2>            (. g2 = factorg2.g; this.tab.MakeSequence(ret.g, g2); .)
   }
-|                               (. g = new Graph(this.tab.NewNode(Node.eps, null, 0)); .)
-)                               (. if (g == null) { // invalid start of Term
-                                     g = new Graph(this.tab.NewNode(Node.eps, null, 0));
+|                               (. var singleNode = this.tab.NewNode(Node.eps, null, 0);
+                                   ret.g = new Graph(singleNode, singleNode); .)
+)                               (. if (ret.g == null) { // invalid start of Term
+                                     var singleNode = this.tab.NewNode(Node.eps, null, 0);
+                                     ret.g = new Graph(singleNode, singleNode);
                                    }
                                  .)
 .
 
 /*------------------------------------------------------------------------------------*/
 
-Factor<out Graph g>             (. var name : string; var kind : number; var pos : Position; var weak : bool = false; 
-                                   g = null;
+Factor<g : Graph;>             (. var pos : Position; var weak : bool = false; 
+                                 ret.g = null;
                                  .)
 =
 ( [ "WEAK"                      (. weak = true; .)
   ]
-  Sym<out name, out kind>       (. var sym = this.tab.FindSym(name);
-                                   if (sym == null && kind == str)
-                                     sym = this.tab.literals[name] as Symbol;
+                                (. var symret : { name : string; kind : number } = { name : null, kind : null }; .)
+  Sym<symret>                   (. var sym = this.tab.FindSym(symret.name);
+                                   if (sym == null && symret.kind == Parser.str)
+                                     sym = this.tab.literals.get(symret.name);
                                    var undef = sym == null;
                                    if (undef) {
-                                     if (kind == id) {
-                                       sym = this.tab.NewSym(Node.nt, name, 0);  // forward nt
+                                     if (symret.kind == Parser.id) {
+                                       sym = this.tab.NewSym(Node.nt, symret.name, 0);  // forward nt
                                      } else if (this.genScanner) { 
-                                       sym = this.tab.NewSym(Node.t, name, this.t.line);
+                                       sym = this.tab.NewSym(Node.t, symret.name, this.t.line);
                                        this.dfa.MatchLiteral(sym.name, sym);
                                      } else {  // undefined string in production
                                        this.SemErr("undefined string in production");
@@ -359,30 +380,34 @@ Factor<out Graph g>             (. var name : string; var kind : number; var pos
                                      else { this.SemErr("only terminals may be weak"); }
                                    }
                                    var p = this.tab.NewNode(typ, sym, this.t.line);
-                                   g = new Graph(p);
+                                   ret.g = new Graph(p, p);
                                  .)
-  [ Attribs<p>                  (. if (kind != id) { this.SemErr("a literal must not have attributes"); } .)
+  [                             (. var attrp = { p : p }; .)
+    Attribs<attrp>              (. if (symret.kind != Parser.id) { this.SemErr("a literal must not have attributes"); } .)
   ]                             (. if (undef) {
                                      sym.attrPos = p.pos;  // dummy
                                    } else if ((p.pos == null) != (sym.attrPos == null)) {
                                      this.SemErr("attribute mismatch between declaration and use of this symbol");
                                    }
 								.)
-| '(' Expression<out g> ')'
-| '[' Expression<out g> ']'     (. this.tab.MakeOption(g); .)
-| '{' Expression<out g> '}'     (. this.tab.MakeIteration(g); .)
-| SemText<out pos>              (. Node p = this.tab.NewNode(Node.sem, null, 0);
+| '(' Expression<ret> ')'
+| '[' Expression<ret> ']'     (. this.tab.MakeOption(ret.g); .)
+| '{' Expression<ret> '}'     (. this.tab.MakeIteration(ret.g); .)
+|                               (. var retSemPos : { pos : Position } = { pos : null }; .)
+   SemText<retSemPos>           (. pos = retSemPos.pos;
+                                   var p = this.tab.NewNode(Node.sem, null, 0);
                                    p.pos = pos;
-                                   g = new Graph(p);
+                                   ret.g = new Graph(p, p);
                                  .)
 | "ANY"                         (. var p = this.tab.NewNode(Node.any, null, 0);  // p.set is set in this.tab.SetupAnys
-                                   g = new Graph(p);
+                                   ret.g = new Graph(p, p);
                                  .)
 | "SYNC"                        (. var p = this.tab.NewNode(Node.sync, null, 0);
-                                   g = new Graph(p);
+                                   ret.g = new Graph(p, p);
                                  .)
-)                               (. if (g == null) {// invalid start of Factor
-                                     g = new Graph(this.tab.NewNode(Node.eps, null, 0));
+)                               (. if (ret.g == null) {// invalid start of Factor
+                                     var nullnode = this.tab.NewNode(Node.eps, null, 0);
+                                     ret.g = new Graph(nullnode, nullnode);
                                    }.)
 .
 
@@ -401,11 +426,11 @@ Condition = { "(" Condition | ANY } ")" .
 /*------------------------------------------------------------------------------------*/
 
 TokenExpr<g : Graph;>            (. var g2 : Graph; .)
-=
+=                               (. var tokentermg : { g : Graph } = { g : null }; .)
   TokenTerm<tokentermg>         (. ret.g = tokentermg.g; var first = true; .)
   {                             WEAK
     '|'
-    TokenTerm<tokentermg2>      (. g2 = tokentermg2.g;
+    TokenTerm<tokentermg>      (. g2 = tokentermg.g;
                                    if (first) { this.tab.MakeFirstAlt(ret.g); first = false; }
                                    this.tab.MakeAlternative(ret.g, g2);
                                  .)
@@ -415,15 +440,15 @@ TokenExpr<g : Graph;>            (. var g2 : Graph; .)
 /*------------------------------------------------------------------------------------*/
 
 TokenTerm<g: Graph;>          (. var g2 : Graph; .)
-=
-  TokenFactor<tokenfactorg>     (. g = tokenfactorg.g; .)
-  { TokenFactor<tokenfactorg2>  (. g2 = tokenfactorg2.g; 
-                                   this.tab.MakeSequence(g, g2); .)
+=                             (. var tokenfactorg : { g : Graph } = { g : null}; .)
+  TokenFactor<tokenfactorg>     (. ret.g = tokenfactorg.g; .)
+  {  TokenFactor<tokenfactorg>  (. g2 = tokenfactorg.g; 
+                                   this.tab.MakeSequence(ret.g, g2); .)
   }
   [ "CONTEXT"
-    '(' TokenExpr<tokenexprg2>    (. g2 = tokenexprg2.g; 
+    '(' TokenExpr<tokenfactorg>    (. g2 = tokenfactorg.g; 
                                      this.tab.SetContextTrans(g2.l); this.dfa.hasCtxMoves = true;
-                                     this.tab.MakeSequence(g, g2); .)
+                                     this.tab.MakeSequence(ret.g, g2); .)
     ')'
   ]
 .
@@ -434,7 +459,7 @@ TokenFactor<g : Graph;>        (. .)
 =
                                 (. ret.g = null; .)
 (                               (. var sym : { name : string; kind : number } = { name : "", kind : -1 }; .)
-  Sym<sym>                      (. if (sym.kind == id) {
+  Sym<sym>                      (. if (sym.kind == Parser.id) {
                                      var c = this.tab.FindCharClass(sym.name);
                                      if (c == null) {
                                        this.SemErr("undefined name");
@@ -442,33 +467,34 @@ TokenFactor<g : Graph;>        (. .)
                                      }
                                      var p = this.tab.NewNode(Node.clas, null, 0); 
                                      p.val = c.n;
-                                     ret.g = new Graph(p);
-                                     tokenString = noString;
+                                     ret.g = new Graph(p, p);
+                                     this.tokenString = Parser.noString;
                                    } else { // str
                                      ret.g = this.tab.StrToGraph(sym.name);
-                                     if (tokenString == null) tokenString = sym.name;
-                                     else tokenString = noString;
+                                     if (this.tokenString == null) this.tokenString = sym.name;
+                                     else this.tokenString = Parser.noString;
                                    }
                                  .)
-|                                      (. var tokenexprg : { g: Graph} = {g : null}; .)
-	'(' TokenExpr<tokenexprg> ')'      (. ret.g = tokenexpr.g; .)
-| '[' TokenExpr<tokenexprg> ']'      (. ret.g = tokenexpr.g; this.tab.MakeOption(g); tokenString = noString; .)
-| '{' TokenExpr<tokenexprg> '}'      (. ret.g = tokenexpr.g; this.tab.MakeIteration(g); tokenString = noString; .)
+|                                      (. var tokenexpr : { g: Graph} = {g : null}; .)
+	'(' TokenExpr<tokenexpr> ')'      (. ret.g = tokenexpr.g; .)
+| '[' TokenExpr<tokenexpr> ']'      (. ret.g = tokenexpr.g; this.tab.MakeOption(ret.g); this.tokenString = Parser.noString; .)
+| '{' TokenExpr<tokenexpr> '}'      (. ret.g = tokenexpr.g; this.tab.MakeIteration(ret.g); this.tokenString = Parser.noString; .)
 )                                    (. if (ret.g == null) { // invalid start of TokenFactor
-                                        ret.g = new Graph(this.tab.NewNode(Node.eps, null, 0)); 
+                                        var nullnode = this.tab.NewNode(Node.eps, null, 0);
+                                        ret.g = new Graph(nullnode, nullnode); 
                                    } .)
 .
 
 /*------------------------------------------------------------------------------------*/
 
 Sym<name : string; kind : number;>
-=                               (. ret.name = "???"; ret.kind = id; .)
-( ident                         (. ret.kind = id; ret.name = this.t.val; .)
+=                               (. ret.name = "???"; ret.kind = Parser.id; .)
+( ident                         (. ret.kind = Parser.id; ret.name = this.t.val; .)
 | (string                       (. ret.name = this.t.val; .)
-  | char                        (. ret.name = "\"" + this.t.val.substring(1, t.val.Length-2) + "\""; .)
-  )                             (. ret.kind = str;
-                                   if (this.dfa.ignoreCase) ret.name = ret.name.ToLower();
-                                   if (ret.name.IndexOf(' ') >= 0)
+  | char                        (. ret.name = "\"" + this.t.val.substring(1, this.t.val.length-2) + "\""; .)
+  )                             (. ret.kind = Parser.str;
+                                   if (this.dfa.ignoreCase) ret.name = ret.name.toLowerCase();
+                                   if (ret.name.indexOf(' ') >= 0)
                                      this.SemErr("literal tokens must not contain blanks"); .)
 )
 .
@@ -481,12 +507,12 @@ Attribs<p : Node;>          // TODO: in argument!!
   { ANY 
   | badString                   (. this.SemErr("bad string in attributes"); .)
   }
-  '>'                           (. if (this.t.pos > beg) p.pos = new Position(beg, this.t.pos, col, line); .)
+  '>'                           (. if (this.t.pos > beg) ret.p.pos = new Position(beg, this.t.pos, col, line); .)
 | "<."                          (. var beg = this.la.pos; var col = this.la.col; var line = this.la.line; .)
   { ANY 
   | badString                   (. this.SemErr("bad string in attributes"); .)
   }
-  ".>"                          (. if (this.t.pos > beg) p.pos = new Position(beg, this.t.pos, col, line); .)
+  ".>"                          (. if (this.t.pos > beg) ret.p.pos = new Position(beg, this.t.pos, col, line); .)
 .
 
 /*------------------------------------------------------------------------------------*/

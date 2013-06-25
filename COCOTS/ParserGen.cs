@@ -319,9 +319,16 @@ public class ParserGen {
 	void GenProductions() {
 		foreach (Symbol sym in tab.nonterminals) {
 			curSy = sym;
-			gen.Write("\t{0}(ret : {{", sym.name);
-			CopySourcePart(sym.attrPos, 0);
-			gen.WriteLine("}) {");
+			if (sym.attrPos != null && sym.attrPos.end - sym.attrPos.beg > 0)
+			{
+				gen.Write("\t{0}(ret : {{", sym.name);
+				CopySourcePart(sym.attrPos, 0);
+				gen.WriteLine("}) {");
+			}
+			else
+			{
+				gen.Write("\t{0}() {{", sym.name);
+			}
 			CopySourcePart(sym.semPos, 2);
 			GenCode(sym.graph, 2, new BitArray(tab.terminals.Count));
 			gen.WriteLine("\t}"); 
@@ -369,7 +376,7 @@ public class ParserGen {
 		g.CopyFramePart("-->declarations"); CopySourcePart(tab.semDeclPos, 0);
 		g.CopyFramePart("-->pragmas"); GenCodePragmas();
 		g.CopyFramePart("-->productions"); GenProductions();
-		g.CopyFramePart("-->parseRoot"); gen.WriteLine("\t\tthis.{0}(null);", tab.gramSy.name); if (tab.checkEOF) gen.WriteLine("\t\tthis.Expect(0);");
+		g.CopyFramePart("-->parseRoot"); gen.WriteLine("\t\tthis.{0}();", tab.gramSy.name); if (tab.checkEOF) gen.WriteLine("\t\tthis.Expect(0);");
 		g.CopyFramePart("-->initialization"); InitSets();
 		g.CopyFramePart("-->errors"); gen.Write(err.ToString());
 		g.CopyFramePart(null);

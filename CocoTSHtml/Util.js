@@ -7,6 +7,7 @@ var at;
                     function FileStream() {
                     }
                     FileStream.prototype.ReadCharacter = function () {
+                        // TODO
                         return "\0";
                     };
                     return FileStream;
@@ -56,6 +57,7 @@ var at;
                     };
 
                     StringWriter.prototype.ToString = function () {
+                        // TODO
                         return null;
                     };
                     return StringWriter;
@@ -101,11 +103,13 @@ var at;
                     function BitArray(size, value) {
                     }
                     BitArray.prototype.Or = function (other) {
+                        // TODO:
                         return null;
                     };
 
                     Object.defineProperty(BitArray.prototype, "Count", {
                         get: function () {
+                            // TODO:
                             return 0;
                         },
                         enumerable: true,
@@ -113,16 +117,19 @@ var at;
                     });
 
                     BitArray.prototype.Clone = function () {
+                        // TODO
                         return null;
                     };
                     BitArray.prototype.SetAll = function (b) {
                     };
 
                     BitArray.prototype.And = function (other) {
+                        // TODO
                         return null;
                     };
 
                     BitArray.prototype.Not = function () {
+                        // TODO
                         return this.Clone();
                     };
                     return BitArray;
@@ -134,11 +141,17 @@ var at;
                     }
                     Object.defineProperty(Hashtable.prototype, "length", {
                         get: function () {
+                            // TODO
                             return 0;
                         },
                         enumerable: true,
                         configurable: true
                     });
+
+                    Hashtable.prototype.get = function (name) {
+                        // TODO
+                        return null;
+                    };
                     return Hashtable;
                 })();
                 coco.Hashtable = Hashtable;
@@ -154,6 +167,7 @@ var at;
 
                     Object.defineProperty(StringBuilder.prototype, "length", {
                         get: function () {
+                            // TODO
                             return 0;
                         },
                         enumerable: true,
@@ -161,6 +175,7 @@ var at;
                     });
 
                     StringBuilder.prototype.toString = function () {
+                        // TODO
                         return "";
                     };
                     return StringBuilder;
@@ -173,3 +188,4 @@ var at;
     })(at.jku || (at.jku = {}));
     var jku = at.jku;
 })(at || (at = {}));
+//@ sourceMappingURL=Util.js.map
