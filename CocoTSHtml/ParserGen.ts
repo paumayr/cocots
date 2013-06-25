@@ -374,20 +374,19 @@ export class ParserGen {
 		for (var i = 0; i < this.tab.nonterminals.length; i++) {
 			var sym = this.tab.nonterminals[i];
 			this.curSy = sym;
-			this.gen.WriteFormatted1("\t{0}() ", sym.name);
-			this.gen.Write(" : {");
-			this.CopySourcePart(sym.attrPos, 0);
-			this.gen.WriteLineText(" } ");
-			this.Indent(1);
-			this.gen.WriteLineText(" { ");
-			this.Indent(2);
-			this.gen.Write("var ret : { ");
-			this.CopySourcePart(sym.attrPos, 0);
-			this.gen.WriteLineText("};");
+			if (sym.attrPos != null && sym.attrPos.end - sym.attrPos.beg > 0)
+			{
+				this.gen.WriteFormatted1("\t{0}(ret : {{", sym.name);
+				this.CopySourcePart(sym.attrPos, 0);
+				this.gen.WriteLineText("}) {");
+			}
+			else
+			{
+				this.gen.WriteFormatted1("\t{0}() {{", sym.name);
+			}
 			this.CopySourcePart(sym.semPos, 2);
 			this.GenCode(sym.graph, 2, new BitArray(this.tab.terminals.length, false));
-			this.gen.WriteLineText("\t\treturn ret;");
-			this.gen.WriteLineText("\t}");
+			this.gen.WriteLineText("\t}"); 
 		}
 	}
 
